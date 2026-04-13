@@ -78,35 +78,47 @@ describe("remove command", () => {
   });
 
   describe("no arguments", () => {
-    it("exits 1 with usage message", () => {
+    it("exits 2 (usage error) with usage message", () => {
       const r = cli("remove", [], env);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       assert.ok(r.stderr.includes("Usage"));
     });
   });
 
   describe("--help flag", () => {
-    it("shows help with --force, --all, --keep-members", () => {
+    it("shows help with --yes, --force, --keep-members", () => {
       const r = cli("remove", ["--help"], env);
       // --help is handled cleanly (exit 0).
       assert.equal(r.exitCode, 0);
+      // New help text advertises --yes as the canonical non-interactive
+      // opt-out, --force as its legacy alias, --keep-members for teams,
+      // and --interactive as the force-interactive override. --all is
+      // no longer a flag (the behavior "remove from every location" is
+      // now triggered by --yes in multi-match mode).
+      assert.ok(r.stderr.includes("--yes"));
       assert.ok(r.stderr.includes("--force"));
-      assert.ok(r.stderr.includes("--all"));
       assert.ok(r.stderr.includes("--keep-members"));
     });
   });
 
   describe("artifact not found", () => {
-    it("exits 1 with 'not found' error listing what IS installed", () => {
+    it("soft-skips missing identifier with a 'not installed' note, exits 0", () => {
+      // New behavior: a missing identifier in `remove` is not an error.
+      // kit prints "not installed (nothing to remove)" to stdout and
+      // continues. This matches the principle: `remove` means "make
+      // sure these artifacts aren't installed" — they weren't; job done.
       cli(
         "install",
         [join(FIXTURES, "skill", "valid"), "--dir", join(projectDir, ".claude", "skills")],
         env,
       );
       const r = cli("remove", ["nonexistent-thing", projectDir], env);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.includes("not found"));
-      assert.ok(r.stderr.includes("valid-skill"));
+      assert.equal(r.exitCode, 0);
+      const output = r.stdout + r.stderr;
+      assert.ok(
+        output.includes("not installed"),
+        `Expected soft-skip note, got: ${output}`,
+      );
     });
   });
 
@@ -268,15 +280,20 @@ describe("remove command", () => {
       assert.ok(!m2["valid-skill"]);
     });
 
-    it("errors in non-TTY with multiple matches and no --all", () => {
+    it("in non-TTY with multiple matches, --force removes from ALL", () => {
+      // New behavior: --yes / --force (in a non-TTY multi-match scenario)
+      // removes from every matching location. The old behavior required
+      // an explicit --all flag; the user's new rule folds that into --yes.
+      // This test pins the new semantics.
       const dir1 = join(projectDir, ".claude", "skills");
       const dir2 = join(projectDir, ".agents", "skills");
       cli("install", [join(FIXTURES, "skill", "valid"), "--dir", dir1], env);
       cli("install", [join(FIXTURES, "skill", "valid"), "--dir", dir2], env);
 
       const r = cli("remove", ["valid-skill", projectDir, "--force"], env);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.includes("--all") || r.stderr.includes("TTY"));
+      assert.equal(r.exitCode, 0, r.stderr);
+      assert.ok(!existsSync(join(dir1, "valid-skill")));
+      assert.ok(!existsSync(join(dir2, "valid-skill")));
     });
   });
 

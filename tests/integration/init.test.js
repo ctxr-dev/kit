@@ -273,29 +273,32 @@ describe("init command", () => {
     });
 
     it("rejects unknown --type", () => {
+      // Exit code 2 per POSIX-ish convention: usage errors (bad flag
+      // values, unknown commands, missing required args) exit 2 to let
+      // scripts distinguish "you typed it wrong" from "runtime failure".
       const { root, target } = freshTarget("bad-type");
       track(root);
       const r = runInit(["--type", "skil", target]);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       assert.match(r.stderr, /Unknown --type "skil"/);
       assert.ok(!existsSync(target), "unknown --type must not create the target dir");
     });
 
     it("rejects --type with no value", () => {
       const r = runInit(["--type"]);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       assert.match(r.stderr, /--type requires a value/);
     });
 
     it("rejects --type= empty value", () => {
       const r = runInit(["--type="]);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       assert.match(r.stderr, /--type= requires a value/);
     });
 
     it("rejects unknown flags", () => {
       const r = runInit(["--tpe", "skill"]);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       assert.match(r.stderr, /Unknown flag: --tpe/);
     });
 
@@ -304,7 +307,7 @@ describe("init command", () => {
       // consume `-t` as the type value because that would generate a
       // generic "Unknown --type" message instead of a pointed error.
       const r = runInit(["--type", "-t", "agent"]);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       assert.match(r.stderr, /value must not start with '-'/);
     });
 
@@ -312,7 +315,7 @@ describe("init command", () => {
       const { root, target } = freshTarget("extras");
       track(root);
       const r = runInit(["--type", "agent", target, "extra-arg"]);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       assert.match(r.stderr, /at most one positional argument/);
       assert.ok(!existsSync(target), "rejected init must not create the target dir");
     });

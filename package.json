@@ -35,6 +35,7 @@
     "teams"
   ],
   "dependencies": {
+    "@clack/prompts": "^1.2.0",
     "gray-matter": "^4.0.3"
   },
   "devDependencies": {

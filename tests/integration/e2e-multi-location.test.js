@@ -247,10 +247,16 @@ describe("e2e: multi-location skill management", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Scenario 4: Install detects existing in non-TTY
+  // Scenario 4: Install is idempotent in non-TTY — "sticky in place"
   // -----------------------------------------------------------------------
-  describe("Scenario 4: install detects existing skill (non-TTY)", () => {
-    it("errors when skill already in .claude/skills", () => {
+  describe("Scenario 4: install is idempotent in non-TTY (sticky in place)", () => {
+    it("re-installing an existing skill in .claude/skills updates in place, exit 0", () => {
+      // New --yes / non-interactive behavior: if an artifact is already
+      // installed and we see it again, kit updates it in place at the
+      // existing location. Old behavior errored with "already installed"
+      // as a safety guard; the new behavior is idempotent, which makes
+      // `kit install X` safe to re-run in CI pipelines as an "ensure
+      // this is installed" primitive.
       const id = `e2e-dup-${Date.now()}`;
       const src = createLocalSkillPackage(id);
       cleanupDirs.push(src);
@@ -259,34 +265,33 @@ describe("e2e: multi-location skill management", () => {
       assert.equal(cli(`install ${src} --dir ${targetDir}`).exitCode, 0);
 
       const r = cli(`install ${src} ${projectDir}`);
-      assert.equal(r.exitCode, 1);
-      assert.ok((r.stdout + r.stderr).includes("already installed"));
+      assert.equal(r.exitCode, 0);
+      // The wrapper dir is still there (re-installed over itself).
+      assert.ok(existsSync(join(targetDir, id)));
     });
 
-    it("errors when skill is in .agents/skills", () => {
+    it("re-installing a skill already in .agents/skills updates in place", () => {
       const id = `e2e-agents-dup-${Date.now()}`;
       const src = createLocalSkillPackage(id);
       cleanupDirs.push(src);
 
-      cli(`install ${src} --dir ${join(projectDir, ".agents", "skills")}`);
+      const agentsDir = join(projectDir, ".agents", "skills");
+      cli(`install ${src} --dir ${agentsDir}`);
 
       const r = cli(`install ${src} ${projectDir}`);
-      assert.equal(r.exitCode, 1);
-      assert.ok((r.stdout + r.stderr).includes("already installed"));
+      assert.equal(r.exitCode, 0);
+      // Sticky at existing location — .agents/skills wrapper preserved.
+      assert.ok(existsSync(join(agentsDir, id)));
     });
 
-    it("errors when installing twice to --user scope", () => {
+    it("re-installing to --user scope is idempotent", () => {
       const id = `e2e-user-dup-${Date.now()}`;
       const src = createLocalSkillPackage(id);
       cleanupDirs.push(src);
 
-      // First install to --user (fakeHome/.claude/skills)
       assert.equal(cli(`install ${src} --user`).exitCode, 0);
-
-      // Second install to --user — should collide
       const r = cli(`install ${src} --user`);
-      assert.equal(r.exitCode, 1);
-      assert.ok((r.stdout + r.stderr).includes("already installed"));
+      assert.equal(r.exitCode, 0);
     });
   });
 
@@ -334,22 +339,28 @@ describe("e2e: multi-location skill management", () => {
     });
 
     it("errors in non-TTY without --force for single match", () => {
+      // Non-TTY destructive ops require explicit --yes/--force.
+      // Silently returning "did nothing" would be worse UX than erroring.
       const id = `e2e-rm-nof-${Date.now()}`;
       seedSkill(join(projectDir, ".claude", "skills"), id, `src-${id}`);
 
       const r = cli(`remove ${id} ${projectDir}`);
       assert.equal(r.exitCode, 1);
-      assert.ok((r.stderr).includes("--force") || r.stderr.includes("TTY"));
+      assert.ok(r.stderr.includes("--force") || r.stderr.includes("TTY"));
     });
 
-    it("errors in non-TTY without --all for multiple matches", () => {
+    it("in non-TTY, --force removes from ALL matching locations", () => {
+      // New behavior: --yes/--force in a non-TTY multi-match scenario
+      // removes from every matching location. The old --all flag is
+      // accepted as a silent alias for --yes, so scripts keep working.
       const id = `e2e-rm-noall-${Date.now()}`;
       seedSkill(join(projectDir, ".claude", "skills"), id, `src-${id}`);
       seedSkill(join(projectDir, ".agents", "skills"), id, `src-${id}`);
 
       const r = cli(`remove ${id} ${projectDir} --force`);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.includes("--all"));
+      assert.equal(r.exitCode, 0, r.stderr);
+      assert.ok(!existsSync(join(projectDir, ".claude", "skills", id)));
+      assert.ok(!existsSync(join(projectDir, ".agents", "skills", id)));
     });
   });
 
@@ -479,24 +490,33 @@ describe("e2e: multi-location skill management", () => {
   // Scenario 10: Helpful error for nonexistent skill
   // -----------------------------------------------------------------------
   describe("Scenario 10: remove/update nonexistent skill", () => {
-    it("remove lists installed skills in error", () => {
+    it("remove soft-skips a nonexistent skill, exits 0", () => {
+      // New behavior: removing something that isn't installed is a no-op,
+      // not an error. kit prints a "not installed" note and moves on.
       const id = `e2e-exists-${Date.now()}`;
       seedSkill(join(projectDir, ".claude", "skills"), id, `src-${id}`);
 
       const r = cli(`remove totally-fake-skill ${projectDir}`);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.includes("not found"));
-      assert.ok(r.stderr.includes(id));
+      assert.equal(r.exitCode, 0);
+      const output = r.stdout + r.stderr;
+      assert.ok(
+        output.includes("not installed"),
+        `Expected soft-skip note, got: ${output}`,
+      );
     });
 
-    it("update lists installed skills in error", () => {
+    it("update errors with missing-list and --install hint", () => {
+      // New pre-flight behavior: update prints the missing identifier
+      // and exits 2 (usage error) without touching any existing installs.
+      // The --install hint tells users how to install missing items
+      // without a separate command.
       const id = `e2e-upd-nf-${Date.now()}`;
       seedSkill(join(projectDir, ".claude", "skills"), id, `src-${id}`);
 
       const r = cli(`update totally-fake-skill ${projectDir}`);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.includes("not found"));
-      assert.ok(r.stderr.includes(id));
+      assert.equal(r.exitCode, 2);
+      assert.ok(r.stderr.includes("totally-fake-skill"));
+      assert.ok(r.stderr.includes("--install"));
     });
   });
 
@@ -572,16 +592,16 @@ describe("e2e: multi-location skill management", () => {
       );
 
       // In the type-aware world, discovery is manifest-driven. A corrupt
-      // manifest is treated as empty → no entries → "not found" error for
-      // the requested id. The CLI surfaces a clean error instead of
-      // crashing on the bad JSON.
+      // manifest is treated as empty → no entries → update's pre-flight
+      // reports the identifier as missing and exits 2 (usage error). The
+      // CLI surfaces a clean error instead of crashing on the bad JSON.
       const r = cli(`update ${id} ${projectDir}`);
-      assert.equal(r.exitCode, 1);
+      assert.equal(r.exitCode, 2);
       const output = r.stdout + r.stderr;
       assert.ok(
-        output.toLowerCase().includes("not found") ||
+        output.toLowerCase().includes("not installed") ||
           output.toLowerCase().includes("no artifacts installed"),
-        `Expected clean not-found error with corrupt manifest, got: ${output}`,
+        `Expected clean pre-flight error with corrupt manifest, got: ${output}`,
       );
     });
 
@@ -604,7 +624,7 @@ describe("e2e: multi-location skill management", () => {
       assert.ok(manifest[id]);
     });
 
-    it("remove errors cleanly when manifest is corrupt", () => {
+    it("remove soft-skips cleanly when manifest is corrupt", () => {
       const id = `e2e-corrupt-rm-${Date.now()}`;
       const targetDir = join(projectDir, ".claude", "skills");
       const skillDir = join(targetDir, id);
@@ -615,11 +635,13 @@ describe("e2e: multi-location skill management", () => {
       );
       writeFileSync(join(targetDir, ".ctxr-manifest.json"), "NOT JSON");
 
-      // Discovery is manifest-driven. Corrupt manifest → no entries
-      // → clean "not found" error instead of a crash.
+      // Discovery is manifest-driven. Corrupt manifest → no entries →
+      // remove's new soft-skip behavior prints "not installed" and exits
+      // 0 (nothing to do) instead of a crash or a hard error.
       const r = cli(`remove ${id} ${projectDir} --force`);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.toLowerCase().includes("not found"));
+      assert.equal(r.exitCode, 0);
+      const output = r.stdout + r.stderr;
+      assert.ok(output.toLowerCase().includes("not installed"));
     });
   });
 
@@ -792,10 +814,12 @@ describe("e2e: multi-location skill management", () => {
       assert.ok(r.stderr.includes("No artifacts installed"));
     });
 
-    it("remove errors with 'not found'", () => {
+    it("remove soft-skips with 'not installed' note, exits 0", () => {
+      // New behavior: missing identifiers are a soft-skip, not an error.
       const r = cli(`remove some-artifact ${projectDir}`);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.includes("not found"));
+      assert.equal(r.exitCode, 0);
+      const output = r.stdout + r.stderr;
+      assert.ok(output.includes("not installed"));
     });
   });
 

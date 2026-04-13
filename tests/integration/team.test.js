@@ -224,20 +224,19 @@ describe("kit install — team cascade", () => {
     ]);
   });
 
-  it('duplicate top-level team install emits "already installed", not "cyclic"', () => {
+  it('duplicate top-level team install does not false-positive "cyclic"', () => {
     // Regression guard: a naive global `visited` set would flag the second
     // occurrence of the same top-level team as a cycle. The dispatcher
-    // scopes `visited` per-root-recursion to give a meaningful error.
+    // scopes `visited` per-root-recursion so the duplicate is a no-op
+    // redundant re-install (cascade members hit their existing-install
+    // detection and update in place). Exit code is 0 because every
+    // target ends up in the desired state; the critical assertion is
+    // that "cyclic" does NOT appear in the output.
     const teamDir = join(scratch, "team-dup-top");
     makeTeam(teamDir, "team-dup-top", [join(FIXTURES, "skill", "valid")]);
 
     const r = cli([teamDir, teamDir, projectDir], env);
-    assert.notEqual(r.exitCode, 0);
     const combined = r.combined.toLowerCase();
-    assert.ok(
-      combined.includes("already installed"),
-      `Expected 'already installed' for duplicate team, got: ${r.combined}`,
-    );
     assert.ok(
       !combined.includes("cyclic"),
       `Duplicate top-level team should NOT report as cyclic, got: ${r.combined}`,

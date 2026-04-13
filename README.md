@@ -38,6 +38,57 @@ Every example below uses the `npx @ctxr/kit` form. If you prefer a short
 alias, add one to your shell (`alias kit='npx @ctxr/kit'`) — kit itself
 never asks you to install it globally.
 
+## Interactive mode (default)
+
+`kit` is **interactive by default**. In a terminal, every command that has
+a choice to make prompts you with an arrow-key menu or a short question:
+
+- `install` shows a destination menu with every candidate location
+  (`.claude/<type>/`, `.agents/<type>/`, `~/.claude/<type>/`, or a custom
+  path you type) and pre-highlights the one kit would auto-pick.
+- For any artifact you're installing that's already installed at a
+  *different* location than you just picked, `install` asks per-item
+  whether to **keep** it there (update in place) or **move** it to the
+  chosen destination.
+- `update` pre-flights the list — if any identifier you named isn't
+  installed yet, it prints the missing list and exits so you don't
+  silently update "everything except those".
+- `remove` that finds an artifact in multiple locations asks which one to
+  remove. Missing identifiers are soft-skipped with a one-line note.
+- `init` runs a 9-question wizard (type, name, author, description,
+  license, target, overwrite confirmation, git init, npm install) with
+  smart defaults drawn from `git config` and the current directory name.
+
+### Non-interactive / scripted use
+
+Non-interactive mode kicks in automatically in three cases, no flag
+required:
+
+1. **`CI=true`** environment variable is set (GitHub Actions, GitLab CI,
+   CircleCI, Travis, Buildkite, and most other CI runners set this).
+2. **stdin is not a TTY** (e.g. `kit install X < /dev/null`, or kit
+   running under `spawn()` with piped stdio).
+3. **Explicit `--yes` / `-y`** flag on the command line.
+
+In non-interactive mode every prompt resolves to its declared default, and
+`install` never destructively moves an existing install — it updates in
+place at whatever location the artifact is currently at. This keeps
+automation stable: pipelines that run `npx @ctxr/kit install X` will
+always land the artifact in a predictable place.
+
+```bash
+# All equivalent — all three trigger silent, no-prompt behavior:
+npx @ctxr/kit install @ctxr/skill-code-review --yes
+CI=true npx @ctxr/kit install @ctxr/skill-code-review
+npx @ctxr/kit install @ctxr/skill-code-review < /dev/null
+```
+
+### Forcing interactive mode in CI
+
+If you need prompts even under `CI=true` (rare, but useful in dev
+containers), pass `-i` / `--interactive`. That flag overrides all three
+auto-detection triggers.
+
 ## Artifact types
 
 `kit` understands every artifact type Claude Code can discover, plus a `team`

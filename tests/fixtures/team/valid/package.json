@@ -1,0 +1,13 @@
+{
+  "name": "team-valid",
+  "version": "1.0.0",
+  "description": "A valid team fixture: cascades to the valid-skill and agent-file-minimal fixtures via relative paths.",
+  "files": ["README.md"],
+  "ctxr": {
+    "type": "team",
+    "includes": [
+      "../../skill/valid",
+      "../../agent/file-minimal"
+    ]
+  }
+}

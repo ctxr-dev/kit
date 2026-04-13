@@ -12,9 +12,10 @@
  * artifacts do, so this dedicated `teams/` location keeps uniformity with
  * the per-type manifest layout without polluting the registry.
  *
- * Interactive selection (`-i`) currently prints the member list before
- * cascading; a real per-member prompt is a future extension. Non-interactive
- * install-all is the default and the only way to install a team in CI.
+ * Interactive mode is handled upstream in `src/commands/install.js`, which
+ * runs the shared destination prompt once at the batch level and passes
+ * the resolved strategy down to every team member via synthetic flags.
+ * This installer itself contains no prompt code.
  */
 
 import { mkdirSync } from "node:fs";
@@ -26,13 +27,26 @@ import { installedName } from "../lib/types.js";
 /**
  * Resolve the manifest directory for team entries.
  *
+ * Preference order:
+ *   1. `--user` → `~/.claude/teams/`
+ *   2. `dir` override (synthesized by the install orchestrator's
+ *      `buildCascadeFlags`) → `<dir>/teams/`. This is the knob that
+ *      routes CUSTOM / EXPLICIT_DIR / PROJECT_AGENTS strategies so the
+ *      team manifest lands next to its members instead of getting stuck
+ *      at the project default `.claude/` tree.
+ *   3. fallback → `<projectPath>/.claude/teams/`
+ *
  * @param {object} opts
  * @param {string} opts.projectPath — absolute project root
  * @param {boolean} [opts.user] — write to user-scope location
+ * @param {string|null} [opts.dir] — strategy-derived base dir (optional)
  */
-function resolveTeamManifestDir({ projectPath, user }) {
+function resolveTeamManifestDir({ projectPath, user, dir }) {
   if (user) {
     return join(homedir(), ".claude", "teams");
+  }
+  if (dir) {
+    return join(dir, "teams");
   }
   return join(projectPath, ".claude", "teams");
 }
@@ -93,15 +107,6 @@ export async function installTeam(args) {
     throw new Error(`Team "${packageName}" has empty or missing "ctxr.includes"`);
   }
 
-  // Interactive mode currently prints the member list before cascading;
-  // every member is still installed. A real per-member prompt is a future
-  // extension and would gate this with a reader.
-  if (flags.interactive && process.stdin.isTTY) {
-    console.log(`\n  Team '${packageName}' members (${includes.length}):`);
-    for (const spec of includes) console.log(`    - ${spec}`);
-    console.log("");
-  }
-
   const installedMembers = [];
   const beforeInstalledLen = report.installed.length;
   const beforeFailedLen = report.failed.length;
@@ -142,8 +147,14 @@ export async function installTeam(args) {
   }
   const memberFailures = report.failed.length - beforeFailedLen;
 
-  // Write team manifest entry
-  const manifestDir = resolveTeamManifestDir({ projectPath, user: flags.user });
+  // Write team manifest entry. `flags.dir` here is the strategy-derived
+  // base dir from `buildCascadeFlags`, NOT a user-supplied `--dir` path;
+  // see the helper's docstring for how each strategy maps.
+  const manifestDir = resolveTeamManifestDir({
+    projectPath,
+    user: flags.user,
+    dir: flags.dir,
+  });
   mkdirSync(manifestDir, { recursive: true });
   const manifest = readManifest(manifestDir);
   const entry = {

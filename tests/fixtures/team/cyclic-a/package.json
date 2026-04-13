@@ -1,0 +1,12 @@
+{
+  "name": "team-cyclic-a",
+  "version": "1.0.0",
+  "description": "Half of a cycle: team A includes team B, which includes team A. Used to pin kit's cycle-detection guard in the team installer.",
+  "files": ["README.md"],
+  "ctxr": {
+    "type": "team",
+    "includes": [
+      "../cyclic-b"
+    ]
+  }
+}

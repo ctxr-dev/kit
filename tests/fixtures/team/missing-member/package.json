@@ -1,0 +1,13 @@
+{
+  "name": "team-missing-member",
+  "version": "1.0.0",
+  "description": "Team with one valid member and one that points at a nonexistent path. Exercises the batch-continue rule: the valid member installs, the missing member records an error, and the overall team install reports a partial success.",
+  "files": ["README.md"],
+  "ctxr": {
+    "type": "team",
+    "includes": [
+      "../../skill/valid",
+      "../../skill/totally-nonexistent-ghost-skill"
+    ]
+  }
+}

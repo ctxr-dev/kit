@@ -52,12 +52,20 @@ Artifact types:
 Global options:
   --help, -h                Show this help message
   --version, -v             Show version
+  -y, --yes                 Skip all prompts and use defaults
+  -i, --interactive         Force interactive mode (overrides CI detection)
 
-Install-time options (apply to 'install' only — 'update' preserves each
-artifact's recorded location and re-derives the destination automatically):
-  --dir <path>              Install into a specific directory
-  --user                    Install to ~/.claude/<type>/ (user-global)
-  -i, --interactive         Print team-member list before cascading
+Interactive mode (default):
+  In a TTY, kit prompts for destination selection, wizard fields, and
+  destructive confirmations. Non-interactive mode is triggered automatically
+  when CI=true is set (GitHub Actions, GitLab, CircleCI, etc.) or when
+  stdin is not a terminal — so scripts and pipelines keep working without
+  any flag. Pass --yes to force non-interactive mode from within a TTY.
+  Pass --interactive to force prompts even in CI.
+
+Install-time options (for 'install'; forwarded by 'update --install'):
+  --dir <path>              Install into a specific directory (skips menu)
+  --user                    Install to ~/.claude/<type>/ (skips menu)
 
 Exit codes:
   0  success
@@ -111,7 +119,12 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err.message);
+  // Suppress the error message for UserAbortError — the command already
+  // printed "Cancelled." to stderr. Double-printing produces confusing
+  // output. Every other thrown error surfaces its message here.
+  if (err?.name !== "UserAbortError") {
+    console.error(err.message);
+  }
   // Subcommands tag usage errors with `err.exitCode = 2` so scripts can
   // distinguish "you typed it wrong" from "the install actually failed".
   // Any other thrown error exits 1 (runtime failure). Validate the tag

@@ -1,0 +1,12 @@
+{
+  "name": "team-cyclic-b",
+  "version": "1.0.0",
+  "description": "The other half of the cycle: includes team-cyclic-a, which includes team-cyclic-b. Kit's cycle detection must reject this configuration.",
+  "files": ["README.md"],
+  "ctxr": {
+    "type": "team",
+    "includes": [
+      "../cyclic-a"
+    ]
+  }
+}

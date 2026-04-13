@@ -115,16 +115,22 @@ describe("update command", () => {
   });
 
   describe("identifier not found", () => {
-    it("exits 1 with list of installed artifacts", () => {
+    it("exits 2 (usage error) with missing-list and --install hint", () => {
+      // New pre-flight behavior: update splits requested identifiers into
+      // installed/missing and, when any are missing and --install wasn't
+      // passed, prints the missing list and exits without touching any
+      // already-installed entry. This is a usage error (exit 2) because
+      // the caller asked for something the manifest can't do.
       cli(
         "install",
         [join(FIXTURES, "skill", "valid"), "--dir", join(projectDir, ".claude", "skills")],
         env,
       );
       const r = cli("update", ["nonexistent", projectDir], env);
-      assert.equal(r.exitCode, 1);
-      assert.ok(r.stderr.includes("not found"));
-      assert.ok(r.stderr.includes("valid-skill"));
+      assert.equal(r.exitCode, 2);
+      // Missing identifier listed + --install hint
+      assert.ok(r.stderr.includes("nonexistent"));
+      assert.ok(r.stderr.includes("--install"));
     });
   });
 
