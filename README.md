@@ -12,12 +12,11 @@ is written per install root, and the binary is `kit`.
 ## Quick start
 
 ```bash
-npm install -g @ctxr/kit
-kit install @ctxr/skill-code-review     # add the code-review skill
-kit list                                 # see what's installed
+npx @ctxr/kit install @ctxr/skill-code-review     # add the code-review skill
+npx @ctxr/kit list                                # see what's installed
 ```
 
-That's the whole loop. Run `kit --help` for the full command set.
+That's the whole loop. Run `npx @ctxr/kit --help` for the full command set.
 
 ## Prerequisites
 
@@ -28,11 +27,15 @@ That's the whole loop. Run `kit --help` for the full command set.
 
 ## Install
 
+Kit is run exclusively via `npx` — no global install required.
+
 ```bash
-npm install -g @ctxr/kit
-# or use without installing
 npx @ctxr/kit <command>
 ```
+
+Every example below uses the `npx @ctxr/kit` form. If you prefer a short
+alias, add one to your shell (`alias kit='npx @ctxr/kit'`) — kit itself
+never asks you to install it globally.
 
 ## Artifact types
 
@@ -109,26 +112,26 @@ npm packages, GitHub shorthand, and local paths all work side by side.
 
 ```bash
 # single artifact
-kit install @ctxr/skill-code-review
+npx @ctxr/kit install @ctxr/skill-code-review
 
 # mixed batch — different types, different sources
-kit install \
+npx @ctxr/kit install \
   @ctxr/skill-code-review \
   @ctxr/agent-researcher \
   @ctxr/rule-typescript-strict \
   github:ctxr-dev/output-style-teaching
 
 # team meta-package — cascades to every member
-kit install @ctxr/team-full-stack
+npx @ctxr/kit install @ctxr/team-full-stack
 
 # user-global instead of project-local
-kit install @ctxr/skill-code-review --user
+npx @ctxr/kit install @ctxr/skill-code-review --user
 
 # explicit destination
-kit install @ctxr/skill-code-review --dir .agents/skills
+npx @ctxr/kit install @ctxr/skill-code-review --dir .agents/skills
 
 # local path (must start with ./, /, or ~/)
-kit install ./path/to/local-skill
+npx @ctxr/kit install ./path/to/local-skill
 ```
 
 **Batch behavior:** if one package in the batch fails (broken `ctxr` block,
