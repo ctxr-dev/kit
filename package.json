@@ -1,6 +1,6 @@
 {
   "name": "@ctxr/kit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Universal CLI for Claude Code artifacts — install, validate, update, and scaffold skills, agents, commands, rules, output-styles, and teams.",
   "type": "module",
   "license": "MIT",
