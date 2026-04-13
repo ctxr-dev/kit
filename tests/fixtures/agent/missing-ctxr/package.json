@@ -1,0 +1,8 @@
+{
+  "name": "agent-missing-ctxr",
+  "version": "1.0.0",
+  "description": "NEGATIVE fixture: package.json has no ctxr block — must be rejected at install.",
+  "files": [
+    "ctxr-agent-missing.md"
+  ]
+}

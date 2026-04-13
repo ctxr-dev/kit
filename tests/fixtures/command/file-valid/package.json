@@ -1,0 +1,12 @@
+{
+  "name": "command-file-valid",
+  "version": "1.0.0",
+  "description": "Valid single-file command fixture.",
+  "files": [
+    "ctxr-command-valid.md"
+  ],
+  "ctxr": {
+    "type": "command",
+    "target": "file"
+  }
+}

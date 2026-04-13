@@ -1,0 +1,12 @@
+{
+  "name": "agent-file-zero",
+  "version": "1.0.0",
+  "description": "NEGATIVE fixture: target=file but payload contains no artifact files (only metadata).",
+  "files": [
+    "README.md"
+  ],
+  "ctxr": {
+    "type": "agent",
+    "target": "file"
+  }
+}

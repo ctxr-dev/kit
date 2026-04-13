@@ -1,0 +1,12 @@
+{
+  "name": "rule-file-valid",
+  "version": "1.0.0",
+  "description": "Valid single-file rule fixture.",
+  "files": [
+    "ctxr-rule-valid.md"
+  ],
+  "ctxr": {
+    "type": "rule",
+    "target": "file"
+  }
+}

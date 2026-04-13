@@ -1,0 +1,13 @@
+{
+  "name": "agent-file-too-many",
+  "version": "1.0.0",
+  "description": "NEGATIVE fixture: target=file with 2 artifact .md files — must error and not install.",
+  "files": [
+    "a.md",
+    "b.md"
+  ],
+  "ctxr": {
+    "type": "agent",
+    "target": "file"
+  }
+}

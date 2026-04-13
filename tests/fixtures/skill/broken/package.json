@@ -1,0 +1,13 @@
+{
+  "name": "broken-skill",
+  "version": "1.0.0",
+  "description": "Fixture with invalid SKILL.md frontmatter (missing `name`).",
+  "files": [
+    "SKILL.md",
+    "README.md"
+  ],
+  "ctxr": {
+    "type": "skill",
+    "target": "folder"
+  }
+}

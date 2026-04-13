@@ -1,0 +1,14 @@
+{
+  "name": "valid-skill",
+  "version": "1.0.0",
+  "description": "A minimal valid skill for testing.",
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "ctxr": {
+    "type": "skill",
+    "target": "folder"
+  }
+}

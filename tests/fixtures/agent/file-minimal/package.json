@@ -1,0 +1,12 @@
+{
+  "name": "agent-file-minimal",
+  "version": "1.0.0",
+  "description": "Minimal single-file agent — should install as flat .md.",
+  "files": [
+    "ctxr-agent-minimal.md"
+  ],
+  "ctxr": {
+    "type": "agent",
+    "target": "file"
+  }
+}

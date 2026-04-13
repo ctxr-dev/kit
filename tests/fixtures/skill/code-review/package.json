@@ -1,0 +1,15 @@
+{
+  "name": "code-review-skill",
+  "version": "1.0.0",
+  "description": "Code review skill fixture with reviewers and overlays.",
+  "files": [
+    "SKILL.md",
+    "code-reviewer.md",
+    "reviewers",
+    "overlays"
+  ],
+  "ctxr": {
+    "type": "skill",
+    "target": "folder"
+  }
+}

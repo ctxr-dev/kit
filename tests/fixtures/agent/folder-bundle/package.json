@@ -1,0 +1,13 @@
+{
+  "name": "agent-folder-bundle",
+  "version": "1.0.0",
+  "description": "Multi-file agent bundle — installs as wrapper folder.",
+  "files": [
+    "AGENT.md",
+    "docs"
+  ],
+  "ctxr": {
+    "type": "agent",
+    "target": "folder"
+  }
+}

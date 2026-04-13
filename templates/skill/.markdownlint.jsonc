@@ -1,0 +1,13 @@
+// Markdownlint config for Claude Code skills
+{
+  "MD013": false,
+  "MD033": false,
+  "MD024": { "siblings_only": true },
+  "MD025": false,
+  "MD036": false,
+  "MD034": false,
+  "MD040": false,
+  "MD038": false,
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**", ".git/**"]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "output-style-file-valid",
+  "version": "1.0.0",
+  "description": "Valid single-file output-style fixture.",
+  "files": [
+    "ctxr-output-style-valid.md"
+  ],
+  "ctxr": {
+    "type": "output-style",
+    "target": "file"
+  }
+}

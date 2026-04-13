@@ -1,0 +1,15 @@
+{
+  "name": "orphan-overlay-skill",
+  "version": "1.0.0",
+  "description": "Fixture with an overlay file not referenced in overlays/index.md.",
+  "files": [
+    "SKILL.md",
+    "code-reviewer.md",
+    "reviewers",
+    "overlays"
+  ],
+  "ctxr": {
+    "type": "skill",
+    "target": "folder"
+  }
+}
