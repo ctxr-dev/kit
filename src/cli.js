@@ -35,7 +35,7 @@ function printUsage() {
 @ctxr/kit — universal CLI for Claude Code artifacts
 
 Usage:
-  kit <command> [options]
+  npx @ctxr/kit <command> [options]
 
 Commands:
   install <source>...       Install one or more artifacts (npm, github:, local)
@@ -65,14 +65,14 @@ Exit codes:
   2  usage error (unknown command, unknown flag, missing argument)
 
 Examples:
-  kit install @ctxr/skill-code-review
-  kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c
-  kit install @ctxr/team-full-stack --user
-  kit init --type agent my-agent
-  kit list
-  kit validate ./my-skill
+  npx @ctxr/kit install @ctxr/skill-code-review
+  npx @ctxr/kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c
+  npx @ctxr/kit install @ctxr/team-full-stack --user
+  npx @ctxr/kit init --type agent my-agent
+  npx @ctxr/kit list
+  npx @ctxr/kit validate ./my-skill
 
-Run 'kit <command> --help' for command-specific options.
+Run 'npx @ctxr/kit <command> --help' for command-specific options.
 `);
 }
 
@@ -101,7 +101,7 @@ async function main() {
   const loader = COMMANDS[command];
   if (!loader) {
     console.error(`Unknown command: ${command}`);
-    console.error(`Run 'kit --help' for usage information.`);
+    console.error(`Run 'npx @ctxr/kit --help' for usage information.`);
     // POSIX-ish convention: 2 = usage error, 1 = runtime failure.
     process.exit(2);
   }

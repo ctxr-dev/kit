@@ -70,7 +70,7 @@ function parseArgs(args) {
       flags.dir = args[++i];
       if (!flags.dir) throw usageError("--dir requires a path argument");
     } else if (a.startsWith("--")) {
-      throw usageError(`Unknown flag: ${a} (run 'kit install --help' for valid flags)`);
+      throw usageError(`Unknown flag: ${a} (run 'npx @ctxr/kit install --help' for valid flags)`);
     } else {
       positionals.push(a);
     }
@@ -105,7 +105,7 @@ function parseArgs(args) {
 }
 
 function printUsage() {
-  console.error("Usage: kit install <source> [<source>...] [options]");
+  console.error("Usage: npx @ctxr/kit install <source> [<source>...] [options]");
   console.error("");
   console.error("Sources:");
   console.error("  @scope/name[@version]    npm package spec");
@@ -119,10 +119,10 @@ function printUsage() {
   console.error("  --help, -h               Show this help");
   console.error("");
   console.error("Examples:");
-  console.error("  kit install @ctxr/skill-code-review");
-  console.error("  kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c");
-  console.error("  kit install @ctxr/team-full-stack --user");
-  console.error("  kit install ./my-local-skill --dir .claude/skills");
+  console.error("  npx @ctxr/kit install @ctxr/skill-code-review");
+  console.error("  npx @ctxr/kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c");
+  console.error("  npx @ctxr/kit install @ctxr/team-full-stack --user");
+  console.error("  npx @ctxr/kit install ./my-local-skill --dir .claude/skills");
 }
 
 /**

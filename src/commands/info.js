@@ -144,7 +144,7 @@ function renderNpm(npmInfo) {
 
 function printUsage() {
   console.error(`
-Usage: kit info <identifier>
+Usage: npx @ctxr/kit info <identifier>
 
 Show information about an installed artifact, a local ctxr package, or a
 package on the npm registry. Searches in this order:

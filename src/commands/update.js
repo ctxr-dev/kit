@@ -108,7 +108,7 @@ async function updateOne(match, projectPath) {
   const { typeName, dir, entry } = match;
   if (!entry.source) {
     console.log(
-      `  ⚠ ${entry.installedName}: no recorded source — reinstall with 'kit install' to enable updates`,
+      `  ⚠ ${entry.installedName}: no recorded source — reinstall via 'npx @ctxr/kit install'`,
     );
     return { ok: false, skipped: true };
   }
@@ -199,7 +199,7 @@ async function updateOne(match, projectPath) {
 }
 
 function printUsage() {
-  console.error("Usage: kit update [identifier] [project-path]");
+  console.error("Usage: npx @ctxr/kit update [identifier] [project-path]");
   console.error("");
   console.error("Re-install one or every artifact from its recorded `source`.");
   console.error("");
@@ -209,10 +209,10 @@ function printUsage() {
   console.error("  project-path   project root (defaults to cwd)");
   console.error("");
   console.error("Examples:");
-  console.error("  kit update");
-  console.error("  kit update ctxr-skill-code-review");
-  console.error("  kit update @ctxr/skill-code-review");
-  console.error("  kit update ctxr-team-full-stack");
+  console.error("  npx @ctxr/kit update");
+  console.error("  npx @ctxr/kit update ctxr-skill-code-review");
+  console.error("  npx @ctxr/kit update @ctxr/skill-code-review");
+  console.error("  npx @ctxr/kit update ctxr-team-full-stack");
 }
 
 export default async function update(args) {
@@ -280,7 +280,7 @@ export default async function update(args) {
   } else {
     const groups = listAllInstalled(projectPath);
     if (groups.length === 0) {
-      throw new Error("No artifacts installed. Use 'kit install' first.");
+      throw new Error("No artifacts installed. Use 'npx @ctxr/kit install' first.");
     }
     matches = [];
     for (const { typeName, dir, entries } of groups) {

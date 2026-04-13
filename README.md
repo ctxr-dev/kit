@@ -6,8 +6,9 @@
 Universal CLI for Claude Code artifacts — install, validate, update, and
 scaffold **skills, agents, commands, rules, output-styles, and teams** with
 one command. The `package.json` `files` field is the single source of truth
-for what each package ships, the manifest filename `.ctxr-manifest.json`
-is written per install root, and the binary is `kit`.
+for what each package ships, and the manifest filename `.ctxr-manifest.json`
+is written per install root. Run the CLI via `npx @ctxr/kit` — no global
+install required.
 
 ## Quick start
 
@@ -105,7 +106,7 @@ installs it; if not, it doesn't.
 
 ## Commands
 
-### `kit install <source> [<source>...] [options]`
+### `npx @ctxr/kit install <source> [<source>...] [options]`
 
 Install one or more artifacts in a single command. Sources can be mixed —
 npm packages, GitHub shorthand, and local paths all work side by side.
@@ -155,49 +156,49 @@ first one that already exists. If neither exists, it creates
 `.claude/<type>/` — Claude Code's native discovery directory — and uses
 that.
 
-### `kit update [name]`
+### `npx @ctxr/kit update [name]`
 
 Re-install one or all artifacts in place using the source recorded in the
 manifest. Searches every project- and user-scope manifest, so you don't
 need to remember where each artifact lives.
 
 ```bash
-kit update                          # update everything
-kit update ctxr-skill-code-review   # update one
+npx @ctxr/kit update                          # update everything
+npx @ctxr/kit update ctxr-skill-code-review   # update one
 ```
 
 Team updates cascade to every member.
 
-### `kit remove <name> [--keep-members]`
+### `npx @ctxr/kit remove <name> [--keep-members]`
 
 Remove an installed artifact (or team). For teams, every member listed in
 the manifest is removed too unless `--keep-members` is passed.
 
 ```bash
-kit remove ctxr-skill-code-review
-kit remove ctxr-team-full-stack --keep-members
+npx @ctxr/kit remove ctxr-skill-code-review
+npx @ctxr/kit remove ctxr-team-full-stack --keep-members
 ```
 
-### `kit list [path]`
+### `npx @ctxr/kit list [path]`
 
 List installed artifacts from every discovered location, grouped by type.
 
 ```bash
-kit list
-kit list ./other-project
+npx @ctxr/kit list
+npx @ctxr/kit list ./other-project
 ```
 
-### `kit info <source>`
+### `npx @ctxr/kit info <source>`
 
 Show details about an installed or remote artifact: type, target layout,
 source, version, file count, install paths.
 
 ```bash
-kit info @ctxr/skill-code-review
-kit info ctxr-agent-researcher
+npx @ctxr/kit info @ctxr/skill-code-review
+npx @ctxr/kit info ctxr-agent-researcher
 ```
 
-### `kit validate [path]`
+### `npx @ctxr/kit validate [path]`
 
 Validate an artifact package's structure ahead of publishing. Dispatches
 to a per-type validator: skill validation (frontmatter, broken-link
@@ -206,28 +207,28 @@ sanity checks plus the universal `target: "file"` ⇒ exactly-one-`.md`-file
 rule that the installer enforces.
 
 ```bash
-kit validate                  # validate package in current dir
-kit validate ./my-skill       # validate at a path
+npx @ctxr/kit validate                  # validate package in current dir
+npx @ctxr/kit validate ./my-skill       # validate at a path
 ```
 
-### `kit init [--type <type>] [name]`
+### `npx @ctxr/kit init [--type <type>] [name]`
 
 Scaffold a new artifact package from a template. Defaults to
 `--type skill` because that's the most common authoring case.
 
 ```bash
-kit init my-skill                       # default --type skill
-kit init --type agent my-agent          # scaffold an agent
-kit init -t command deploy              # short-form flag
-kit init --type team team-full-stack    # scaffold a team meta-package
+npx @ctxr/kit init my-skill                       # default --type skill
+npx @ctxr/kit init --type agent my-agent          # scaffold an agent
+npx @ctxr/kit init -t command deploy              # short-form flag
+npx @ctxr/kit init --type team team-full-stack    # scaffold a team meta-package
 ```
 
 Each template ships a `package.json` with the right `ctxr` block already
 filled in, plus `README.md`, `LICENSE`, and `.gitignore` (the skill
 template additionally ships `.markdownlint.jsonc` and a starter
 `SKILL.md`; file-target templates ship a pre-named `ctxr-{{name}}.md`).
-The scaffolded result passes `kit validate` immediately — edit the
-contents, then publish.
+The scaffolded result passes `npx @ctxr/kit validate` immediately — edit
+the contents, then publish.
 
 ## Global options
 
@@ -239,7 +240,7 @@ contents, then publish.
 | `--help`, `-h`        | Show help (top-level or per-command)                     |
 | `--version`, `-v`     | Print the installed version of `@ctxr/kit`               |
 
-Run `kit <command> --help` for command-specific options.
+Run `npx @ctxr/kit <command> --help` for command-specific options.
 
 ## Publishing
 

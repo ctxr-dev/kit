@@ -51,7 +51,7 @@ const VALIDATORS = Object.freeze({
 });
 
 function printUsage() {
-  console.error("Usage: kit validate [path]");
+  console.error("Usage: npx @ctxr/kit validate [path]");
   console.error("");
   console.error("Validate a ctxr artifact package before publishing.");
   console.error("");
@@ -119,7 +119,7 @@ export default async function validate(args) {
   const pkgPath = join(root, "package.json");
   if (!existsSync(pkgPath)) {
     throw new Error(
-      `No package.json at ${root} — kit validate expects an artifact package directory.`,
+      `No package.json at ${root} — 'validate' expects an artifact package directory.`,
     );
   }
 

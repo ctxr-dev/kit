@@ -17,7 +17,7 @@ import { listAllInstalled } from "../lib/discover.js";
 
 function printUsage() {
   console.error(`
-Usage: kit list [path]
+Usage: npx @ctxr/kit list [path]
 
 List installed artifacts across every known project- and user-scope
 location, grouped by type.
@@ -47,7 +47,7 @@ export default async function list(args) {
 
   if (groups.length === 0) {
     console.log("\nNo artifacts installed.");
-    console.log("Use 'kit install <source>' to install one.\n");
+    console.log("Use 'npx @ctxr/kit install <source>' to install one.\n");
     return;
   }
 

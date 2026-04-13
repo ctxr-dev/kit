@@ -90,7 +90,7 @@ function parseArgs(args) {
 }
 
 function printUsage() {
-  console.error("Usage: kit remove <identifier> [project-path] [options]");
+  console.error("Usage: npx @ctxr/kit remove <identifier> [project-path] [options]");
   console.error("");
   console.error("Options:");
   console.error("  --force, -f       Skip confirmation prompt");
@@ -99,9 +99,9 @@ function printUsage() {
   console.error("  --help, -h        Show this help");
   console.error("");
   console.error("Examples:");
-  console.error("  kit remove ctxr-skill-code-review");
-  console.error("  kit remove @ctxr/skill-code-review --force");
-  console.error("  kit remove ctxr-team-full-stack --keep-members");
+  console.error("  npx @ctxr/kit remove ctxr-skill-code-review");
+  console.error("  npx @ctxr/kit remove @ctxr/skill-code-review --force");
+  console.error("  npx @ctxr/kit remove ctxr-team-full-stack --keep-members");
 }
 
 export default async function remove(args) {

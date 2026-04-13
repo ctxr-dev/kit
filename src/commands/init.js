@@ -93,7 +93,7 @@ function parseArgs(args) {
 }
 
 function printUsage() {
-  console.error("Usage: kit init [--type <type>] [name]");
+  console.error("Usage: npx @ctxr/kit init [--type <type>] [name]");
   console.error("");
   console.error("Scaffold a new ctxr artifact package.");
   console.error("");
@@ -104,9 +104,9 @@ function printUsage() {
   console.error("  -h, --help      show this help");
   console.error("");
   console.error("Examples:");
-  console.error("  kit init my-skill                    # default --type skill");
-  console.error("  kit init --type agent my-agent       # scaffold an agent");
-  console.error("  kit init --type team team-full-stack # scaffold a team bundle");
+  console.error("  npx @ctxr/kit init my-skill                    # default --type skill");
+  console.error("  npx @ctxr/kit init --type agent my-agent       # scaffold an agent");
+  console.error("  npx @ctxr/kit init --type team team-full-stack # scaffold a team bundle");
 }
 
 export default async function init(args) {

@@ -75,10 +75,14 @@ describe("CLI entry point", () => {
       }
     });
 
-    it("uses 'kit' as the binary name in usage and examples", () => {
+    it("uses 'npx @ctxr/kit' as the invocation form in usage and examples", () => {
+      // Kit is run exclusively via npx — the help text must advertise the
+      // full npx invocation so a new user who pastes any line from the
+      // examples block gets a working command, with no 'npm i -g' step
+      // between them and their first success.
       const { stdout } = run("--help");
-      assert.match(stdout, /Usage:\s+kit\s</);
-      assert.match(stdout, /kit install /);
+      assert.match(stdout, /Usage:\s+npx @ctxr\/kit\s</);
+      assert.match(stdout, /npx @ctxr\/kit install /);
     });
 
     it("brands the tool as @ctxr/kit (not the legacy @ctxr-dev/skills)", () => {
@@ -142,12 +146,12 @@ describe("CLI entry point", () => {
       assert.ok(stderr.includes("Unknown command"));
     });
 
-    it("hints at 'kit --help' (not the legacy 'skills --help')", () => {
+    it("hints at 'npx @ctxr/kit --help' (not the legacy 'skills --help')", () => {
       const { stderr } = run("nonexistent");
-      assert.match(stderr, /kit --help/);
+      assert.match(stderr, /npx @ctxr\/kit --help/);
       assert.ok(
         !stderr.includes("skills --help"),
-        "unknown-command hint must use the new binary name",
+        "unknown-command hint must use the new npx invocation form",
       );
     });
   });

@@ -8,7 +8,7 @@ A Claude Code team bundle — installs several artifacts in one command.
 npx @ctxr/kit install @ctxr/{{name}}
 ```
 
-`kit` will cascade-install every member listed in `ctxr.includes`.
+The installer will cascade-install every member listed in `ctxr.includes`.
 
 ## Members
 
