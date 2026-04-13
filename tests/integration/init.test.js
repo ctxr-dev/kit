@@ -85,6 +85,12 @@ describe("init command", () => {
         "package.json",
         ".gitignore",
         ".markdownlint.jsonc",
+        // Shared scaffolding from templates/_common — applied to every
+        // artifact type as of the CI/CD + husky addition.
+        ".github/workflows/ci.yml",
+        ".github/workflows/publish.yml",
+        ".github/workflows/release.yml",
+        ".husky/pre-commit",
       ];
       for (const file of expected) {
         assert.ok(
@@ -196,8 +202,19 @@ describe("init command", () => {
           const r = runInit(["--type", entry.type, target]);
           assert.equal(r.exitCode, 0, r.combined);
 
-          // Universal files for every template family.
-          const universal = ["package.json", "README.md", "LICENSE", ".gitignore"];
+          // Universal files for every template family. The _common
+          // shared template adds CI/CD workflows + husky pre-commit on
+          // top of the classic universals.
+          const universal = [
+            "package.json",
+            "README.md",
+            "LICENSE",
+            ".gitignore",
+            ".github/workflows/ci.yml",
+            ".github/workflows/publish.yml",
+            ".github/workflows/release.yml",
+            ".husky/pre-commit",
+          ];
           for (const f of universal) {
             assert.ok(
               existsSync(join(target, f)),

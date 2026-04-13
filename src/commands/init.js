@@ -557,6 +557,12 @@ export default async function init(args, opts = {}) {
       );
     }
 
+    // Shared templates that apply to every artifact type (CI/CD workflows,
+    // husky pre-commit, LICENSE, etc. can all live here in the future).
+    // Copied BEFORE the type-specific template so per-type files can
+    // override shared defaults if a specific artifact ever needs to.
+    const commonDir = join(TEMPLATES_ROOT, "_common");
+
     console.log(`\nScaffolding ${type}: ${name}\n`);
 
     const vars = {
@@ -572,7 +578,11 @@ export default async function init(args, opts = {}) {
       target: target || "",
     };
 
-    const created = copyTemplate(templateDir, targetDir, vars);
+    const created = [];
+    if (existsSync(commonDir)) {
+      created.push(...copyTemplate(commonDir, targetDir, vars));
+    }
+    created.push(...copyTemplate(templateDir, targetDir, vars));
 
     console.log("  Created:");
     for (const file of created) {
