@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ctxr-dev/ctxr.git"
+    "url": "git+https://github.com/ctxr-dev/kit.git"
   },
-  "homepage": "https://github.com/ctxr-dev/ctxr#readme",
+  "homepage": "https://github.com/ctxr-dev/kit#readme",
   "bugs": {
-    "url": "https://github.com/ctxr-dev/ctxr/issues"
+    "url": "https://github.com/ctxr-dev/kit/issues"
   },
   "engines": {
     "node": ">=18.0.0"
