@@ -84,9 +84,10 @@ describe("init command", () => {
         "LICENSE",
         "package.json",
         ".gitignore",
-        ".markdownlint.jsonc",
         // Shared scaffolding from templates/_common — applied to every
-        // artifact type as of the CI/CD + husky addition.
+        // artifact type: CI/CD workflows, husky pre-commit, markdownlint
+        // config (moved here from the skill-specific template).
+        ".markdownlint.jsonc",
         ".github/workflows/ci.yml",
         ".github/workflows/publish.yml",
         ".github/workflows/release.yml",
@@ -129,6 +130,21 @@ describe("init command", () => {
       assert.ok(!existsSync(join(target, "_gitignore")));
     });
 
+    it(".gitignore contains the shared wiki-local ignore entries", () => {
+      // The shared `_common/_gitignore` file applies to every artifact
+      // type and includes the skill-llm-wiki internal-metadata entries
+      // so any scaffolded package that ends up hosting a private wiki
+      // won't accidentally commit the hidden git database.
+      const { root, target } = freshTarget("gitignore-wiki");
+      track(root);
+      runInit([target]);
+      const content = readFileSync(join(target, ".gitignore"), "utf8");
+      assert.match(content, /^node_modules\/$/m);
+      assert.match(content, /^\.llmwiki\/$/m);
+      assert.match(content, /^\.work\/$/m);
+      assert.match(content, /^\.shape\/history\/\*\/work\/$/m);
+    });
+
     it("renames package.json.tmpl to package.json with @ctxr scope", () => {
       const { root, target } = freshTarget("pkgname");
       track(root);
@@ -158,7 +174,7 @@ describe("init command", () => {
     {
       type: "skill",
       target: "folder",
-      typeFiles: ["SKILL.md", ".markdownlint.jsonc"],
+      typeFiles: ["SKILL.md"],
       hasArtifact: false,
     },
     {
@@ -203,13 +219,14 @@ describe("init command", () => {
           assert.equal(r.exitCode, 0, r.combined);
 
           // Universal files for every template family. The _common
-          // shared template adds CI/CD workflows + husky pre-commit on
-          // top of the classic universals.
+          // shared template adds CI/CD workflows, husky pre-commit, and
+          // markdownlint config on top of the classic universals.
           const universal = [
             "package.json",
             "README.md",
             "LICENSE",
             ".gitignore",
+            ".markdownlint.jsonc",
             ".github/workflows/ci.yml",
             ".github/workflows/publish.yml",
             ".github/workflows/release.yml",

@@ -21,9 +21,12 @@
   ],
   "scripts": {
     "validate": "npx @ctxr/kit validate",
+    "lint": "markdownlint-cli2 '**/*.md' '#node_modules'",
+    "lint:fix": "markdownlint-cli2 --fix '**/*.md' '#node_modules'",
     "prepare": "husky || true"
   },
   "devDependencies": {
-    "husky": "^9.1.0"
+    "husky": "^9.1.0",
+    "markdownlint-cli2": "^0.14.0"
   }
 }
