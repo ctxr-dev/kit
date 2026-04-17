@@ -2,8 +2,8 @@
  * target-layout.test.js
  *
  * Verifies the two on-disk install layouts:
- *   - target:"folder" creates `<root>/<installedName>/` with the full payload
- *     (excluding package.json), preserving nested paths.
+ *   - target:"folder" creates `<root>/<installedName>/` with the full npm
+ *     payload (package.json included), preserving nested paths.
  *   - target:"file" copies a single `.md` file flat into `<root>/` with its
  *     original basename, no wrapper folder.
  *
@@ -65,8 +65,8 @@ describe("target-layout: folder vs file", () => {
       assert.ok(existsSync(join(wrapper, "SKILL.md")));
       assert.ok(existsSync(join(wrapper, "README.md")));
       assert.ok(existsSync(join(wrapper, "LICENSE")));
-      // package.json is kit metadata — excluded from installed artifact.
-      assert.ok(!existsSync(join(wrapper, "package.json")));
+      // package.json ships verbatim so bundle runtime code can read it.
+      assert.ok(existsSync(join(wrapper, "package.json")));
     });
 
     it("installs nested directory layouts under the wrapper", () => {

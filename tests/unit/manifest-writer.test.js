@@ -11,30 +11,19 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
-  isAlwaysDroppedMetadata,
   isFileTargetMetadata,
   resolveFileTargetArtifact,
 } from "../../src/installers/manifest-writer.js";
 
-describe("isAlwaysDroppedMetadata", () => {
-  it("matches package.json exactly", () => {
-    assert.equal(isAlwaysDroppedMetadata("package.json"), true);
-  });
-
-  it("does not match nested package.json", () => {
-    assert.equal(isAlwaysDroppedMetadata("nested/package.json"), false);
-  });
-
-  it("does not match README / LICENSE / CHANGELOG", () => {
-    assert.equal(isAlwaysDroppedMetadata("README.md"), false);
-    assert.equal(isAlwaysDroppedMetadata("LICENSE"), false);
-    assert.equal(isAlwaysDroppedMetadata("CHANGELOG.md"), false);
-  });
-});
-
 describe("isFileTargetMetadata", () => {
   it("rejects package.json", () => {
     assert.equal(isFileTargetMetadata("package.json"), true);
+  });
+
+  it("does not match nested package.json", () => {
+    // Only top-level metadata is filtered; nested package.json inside a
+    // bundle payload is real content.
+    assert.equal(isFileTargetMetadata("nested/package.json"), false);
   });
 
   it("rejects README variants", () => {

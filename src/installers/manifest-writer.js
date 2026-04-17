@@ -59,21 +59,19 @@ export function writeArtifactManifest(args) {
 }
 
 /**
- * Shared "packaging metadata" recognizer used by both installers.
+ * Shared "packaging metadata" recognizer used by target:"file" installs.
  *
- * folder.js drops only `package.json` (README/LICENSE are still useful
- * docs for a bundle artifact). file.js drops ALL metadata so that the
- * single-artifact-file invariant can be enforced on the npm payload.
- *
- * Exposed here as a single source of truth so the two installers can't
- * disagree on what "metadata" means.
+ * target:"folder" copies the full npm payload verbatim (package.json
+ * included), so folder installs don't consult this list — a bundle's
+ * runtime code is free to read its own package.json from the installed
+ * directory. target:"file" still drops metadata because the layout must
+ * resolve to exactly one .md artifact and package.json / README /
+ * LICENSE / CHANGELOG / NOTICE are never that artifact.
  */
 export const PACKAGE_METADATA = {
-  /** Files that kit never copies into either target layout. */
-  alwaysDrop: /^package\.json$/,
-
-  /** Additional files that are dropped only for target:"file" installs. */
+  /** Files dropped during target:"file" resolution. */
   fileTargetDrop: [
+    /^package\.json$/,
     /^README(\..*)?$/i,
     /^LICEN[SC]E(\..*)?$/i,
     /^CHANGELOG(\..*)?$/i,
@@ -82,18 +80,10 @@ export const PACKAGE_METADATA = {
 };
 
 /**
- * True if `path` is a file kit should never copy under any target layout.
- */
-export function isAlwaysDroppedMetadata(path) {
-  return PACKAGE_METADATA.alwaysDrop.test(path);
-}
-
-/**
  * True if `path` is packaging metadata that a target:"file" install should
  * filter out before checking the "exactly one artifact" invariant.
  */
 export function isFileTargetMetadata(path) {
-  if (isAlwaysDroppedMetadata(path)) return true;
   return PACKAGE_METADATA.fileTargetDrop.some((re) => re.test(path));
 }
 

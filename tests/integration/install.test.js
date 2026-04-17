@@ -89,14 +89,15 @@ describe("install command", () => {
       assert.equal(manifest["valid-skill"].version, "1.0.0");
     });
 
-    it("does not copy package.json into the installed folder", () => {
+    it("copies package.json into the installed folder", () => {
       const targetDir = join(projectDir, "skills");
       install(`${join(FIXTURES, "skill", "valid")} --dir ${targetDir}`);
       const installed = join(targetDir, "valid-skill");
       assert.ok(existsSync(join(installed, "SKILL.md")));
-      // package.json is kit's input metadata — should never land inside
-      // the installed artifact directory.
-      assert.ok(!existsSync(join(installed, "package.json")));
+      // Bundle runtime code can read its own package.json from the
+      // installed directory (name, version, ctxr block, etc.). Kit
+      // installs the full npm payload verbatim.
+      assert.ok(existsSync(join(installed, "package.json")));
     });
   });
 

@@ -2,11 +2,12 @@
  * target: "folder" installer.
  *
  * Creates `.claude/<typeDir>/<installedName>/` and copies every file in
- * `packagePayload()` into it, preserving relative paths. `package.json` is
- * intentionally excluded from the copy — it's kit's input metadata, not
- * content the user wants inside a Claude Code artifact directory. README,
- * LICENSE, CHANGELOG, and everything else in the npm payload are copied
- * verbatim so authors can ship rich bundle artifacts with docs/examples/etc.
+ * `packagePayload()` into it verbatim, preserving relative paths. The
+ * full npm payload is installed as-is — package.json, README, LICENSE,
+ * CHANGELOG, and any other shipped files. Bundle runtime code can
+ * therefore read its own package.json from the installed directory
+ * (e.g. to resolve its own name/version), rather than depending on
+ * hard-coded constants that drift from the manifest.
  *
  * Writes a type-aware manifest entry keyed by `installedName`.
  *
@@ -37,10 +38,7 @@ import { cpSync, existsSync, lstatSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { packagePayload } from "../lib/payload.js";
 import { installedName } from "../lib/types.js";
-import {
-  isAlwaysDroppedMetadata,
-  writeArtifactManifest,
-} from "./manifest-writer.js";
+import { writeArtifactManifest } from "./manifest-writer.js";
 
 /**
  * Install a folder-target artifact.
@@ -89,7 +87,6 @@ export function installFolder(opts) {
   // "already installed" block.
   try {
     for (const rel of payload) {
-      if (isAlwaysDroppedMetadata(rel)) continue;
       const srcFile = join(sourceDir, rel);
       // Reject symlink payload entries (see file-header "Symlink safety").
       // lstatSync — NOT statSync — so we inspect the link itself, not its
