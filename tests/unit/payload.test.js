@@ -8,7 +8,11 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { packagePayload, sanitizePayload } from "../../src/lib/payload.js";
+import {
+  extractPackJson,
+  packagePayload,
+  sanitizePayload,
+} from "../../src/lib/payload.js";
 
 // packagePayload shells out to `npm pack --dry-run --json` so every test
 // creates a real on-disk package fixture and asserts against npm's actual
@@ -282,6 +286,32 @@ describe("packagePayload", () => {
       const payload = packagePayload(dir);
       assert.ok(payload.includes("package.json"));
       assert.ok(payload.length >= 1);
+    });
+  });
+
+  describe("extractPackJson (stdout noise resilience)", () => {
+    // CI runners occasionally leak non-JSON warnings onto stdout despite
+    // `--silent --ignore-scripts` (observed on GitHub Actions Linux:
+    // ".git can't be found ..."). The extractor must strip those so
+    // JSON.parse still succeeds.
+    it("returns raw input when it is already clean JSON", () => {
+      const raw = '[{"name":"x","files":[{"path":"a.md"}]}]';
+      assert.equal(extractPackJson(raw), raw);
+    });
+
+    it("strips a warning prefix before the JSON array", () => {
+      const raw = '.git can\'t be found\n[{"name":"x"}]';
+      assert.equal(extractPackJson(raw), '[{"name":"x"}]');
+    });
+
+    it("strips a warning suffix after the JSON array", () => {
+      const raw = '[{"name":"x"}]\nnpm warn leftover message';
+      assert.equal(extractPackJson(raw), '[{"name":"x"}]');
+    });
+
+    it("returns raw string when no bracket pair is present", () => {
+      const raw = "completely broken output";
+      assert.equal(extractPackJson(raw), raw);
     });
   });
 

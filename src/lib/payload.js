@@ -84,7 +84,7 @@ export function packagePayload(packageDir) {
 
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(extractPackJson(raw));
   } catch (err) {
     throw new Error(`Could not parse "npm pack --dry-run" output: ${err.message}`);
   }
@@ -106,6 +106,27 @@ export function packagePayload(packageDir) {
   }
 
   return sanitizePayload(rawFiles, abs);
+}
+
+/**
+ * Strip non-JSON noise from `npm pack --json` stdout.
+ *
+ * Some environments (notably GitHub Actions Linux runners) emit a
+ * git-detection warning on stdout despite `--silent --ignore-scripts`,
+ * producing output like `.git can't be found... [{...}]`. Slice from
+ * the first `[` to the last `]` so stray warnings don't break parsing.
+ *
+ * Exported for direct unit testing; no caller outside this module needs it.
+ *
+ * @param {string} raw — npm pack stdout
+ * @returns {string} the JSON-array slice (or `raw` if no bracket pair found)
+ */
+export function extractPackJson(raw) {
+  if (typeof raw !== "string") return raw;
+  const first = raw.indexOf("[");
+  const last = raw.lastIndexOf("]");
+  if (first >= 0 && last > first) return raw.slice(first, last + 1);
+  return raw;
 }
 
 /**
