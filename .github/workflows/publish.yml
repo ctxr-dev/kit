@@ -14,6 +14,20 @@ jobs:
       id-token: write
 
     steps:
+      - name: Refuse non-tag refs
+        # `workflow_dispatch` is kept (so an operator can re-run a
+        # publish for an existing tag after a transient npm outage),
+        # but it can also be fired against a branch — in which case
+        # the tag/version check below is skipped (its `if` gates on
+        # refs/tags/v*) and `npm publish` would still run. That is
+        # an untagged-publish hole. Refuse any ref that isn't a
+        # `refs/tags/v*` tag up-front, regardless of event type.
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          echo "::error::publish.yml only runs for refs/tags/v*; got ${{ github.ref }}."
+          echo "::error::Re-dispatch against an existing v<version> tag, or push a new one via the release flow."
+          exit 1
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -24,13 +38,38 @@ jobs:
 
       - run: npm ci
 
+      # Defense in depth: CI already ran on the release PR before
+      # merge, but the tag push fires from main regardless of how
+      # it got there. Re-run the scripts CI actually runs
+      # (ci.yml: test:unit, test:integration, test:e2e) plus
+      # `validate` as extra safety, so a compromised or bypassed
+      # PR path cannot silently publish. The probe skips any
+      # script the package.json doesn't declare, so the list is
+      # safe to keep in sync with ci.yml without coupling here.
+      - name: Run checks
+        run: |
+          FAILED=0
+          for check in lint validate test:unit test:integration test:e2e; do
+            if node -e "process.exit((require('./package.json').scripts||{})['$check']?0:1)" 2>/dev/null; then
+              echo "::group::npm run $check"
+              if ! npm run "$check"; then
+                FAILED=1
+              fi
+              echo "::endgroup::"
+            else
+              echo "↷ skipping $check (not declared in package.json)"
+            fi
+          done
+          exit $FAILED
+
       - name: Verify version matches tag
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           PKG_VERSION=$(node -p "require('./package.json').version")
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)."
+            echo "::error::Investigate the merge commit; this should not happen under the PR-based flow."
             exit 1
           fi
 

@@ -293,18 +293,48 @@ the contents, then publish.
 
 Run `npx @ctxr/kit <command> --help` for command-specific options.
 
-## Publishing
+## Releasing
 
-### First-time setup
+Releases are PR-gated. Version bumps land on `main` through a review gate like any other change; only the tag push is automated.
 
-1. Create an npm access token: `npm token create`
-2. In the GitHub repo: **Settings → Secrets → Actions** → add `NPM_TOKEN`
+### One-time setup
 
-### Release
+Enable these on the repo before your first release:
 
-1. **Actions → Release → Run workflow** → choose patch / minor / major
-2. The workflow bumps the version, tags, and pushes — that triggers the
-   Publish workflow, which runs `npm publish`.
+- Repository secret `NPM_TOKEN` set to an npm access token with publish rights on the `@ctxr` scope (`npm token create`, then **Settings → Secrets → Actions** → add `NPM_TOKEN`).
+- **Settings → Actions → General → Workflow permissions**: enable **Allow GitHub Actions to create and approve pull requests** so `release.yml` can open its version-bump PR with `GITHUB_TOKEN`. If the checkbox is greyed out, an organization-level Actions policy is restricting it; ask an org admin to unlock the setting first.
+- (Optional, recommended) GitHub-managed CodeQL default setup: **Security → Code security** → enable default setup for `javascript-typescript` and `actions`.
+- (Optional) A branch ruleset on `main` requiring PR review + code scanning. The release flow works without it; gates are strictly stricter when enabled.
+
+### Cutting a release
+
+1. **Actions → Release → Run workflow**.
+   - Branch selector: `main` (the workflow refuses any other ref).
+   - Version bump: `patch` / `minor` / `major`.
+   - Click **Run workflow**.
+2. The workflow bumps `package.json` on a fresh `release/v<version>` branch and opens a PR to `main` titled `release: v<version>`.
+3. Review the PR (diff is just version fields). Approve + merge.
+4. On merge, `tag-on-main.yml` fires automatically:
+   - Detects the version change.
+   - Creates and pushes the annotated `v<version>` tag via `GITHUB_TOKEN`.
+5. **Actions → Publish to npm → Run workflow** on the `v<version>` tag. The workflow re-runs `lint / validate / test:unit / test:integration / test:e2e`, verifies the tag matches `package.json`, and publishes `@ctxr/kit` to npm.
+
+> **Why a manual dispatch for step 5?** GitHub's built-in `GITHUB_TOKEN` cannot trigger further workflows (`on: push: tags` won't fire when a workflow pushed the tag). So the tag auto-creation stops at the tag. Publishing is one extra click. To make it fully automatic, swap the push credential in `tag-on-main.yml` for a GitHub App token or fine-grained PAT stored as a repo secret (`actions/create-github-app-token` or a `secrets.TAG_PUSH_PAT`), then the `push: tags` trigger on `publish.yml` will fire and step 5 happens by itself.
+
+From **Run workflow** on Release to **published on npm** is one dispatch + one PR merge + one dispatch (or one dispatch + one PR merge, once a PAT/App-token is wired in).
+
+### Troubleshooting
+
+- **Release workflow fails with "dispatched from non-main ref"** — you selected a feature branch in the Actions UI. Re-dispatch with `main`.
+- **`tag-on-main` fails with "Tag vX.Y.Z exists but points at …"** — a stale/orphan tag from a prior failed release. Delete and re-run:
+
+  ```bash
+  git push origin --delete vX.Y.Z
+  ```
+
+  Then merge a trivial no-op PR to `main` (or revert-and-re-merge the release PR) to retrigger `tag-on-main`. Direct pushes to `main` may be blocked by branch protection, so the PR path is the reliable retrigger.
+- **`publish.yml` fails on "Verify version matches tag"** — tag and `package.json` disagree. Investigate the merge commit; this should not happen under the PR-based flow.
+- **GitHub Actions is not permitted to create pull requests** — org or enterprise policy blocks the `GITHUB_TOKEN` from opening PRs. Enable **Allow GitHub Actions to create and approve pull requests** at the org level (**Settings → Actions → General → Workflow permissions**), or ask the enterprise admin to unlock the setting.
 
 ## Development
 
