@@ -180,7 +180,30 @@ jobs:
           if [ $PUSH_STATUS -eq 0 ]; then
             echo "Created and pushed tag ${TAG}"
           elif echo "$PUSH_OUT" | grep -q "already exists"; then
-            echo "Tag ${TAG} was created concurrently; treating as success."
+            # Someone (or something) created this tag between our
+            # ls-remote check above and this push. "already exists"
+            # alone is not enough to treat as success: the concurrent
+            # creator may have tagged a different commit, in which
+            # case this release is orphaned (publish.yml fires for
+            # their commit, not ours). Re-read the remote tag and
+            # compare to HEAD before declaring success.
+            HEAD_SHA=$(git rev-parse HEAD)
+            VERIFY_OUT=$(git ls-remote --tags origin \
+              "refs/tags/${TAG}" \
+              "refs/tags/${TAG}^{}" \
+              2>/dev/null || true)
+            VERIFY_SHA=$(echo "$VERIFY_OUT" | awk '/\^\{\}$/ {print $1}')
+            if [ -z "$VERIFY_SHA" ]; then
+              VERIFY_SHA=$(echo "$VERIFY_OUT" | awk '{print $1; exit}')
+            fi
+            if [ "$VERIFY_SHA" = "$HEAD_SHA" ]; then
+              echo "Tag ${TAG} was created concurrently at HEAD ($HEAD_SHA); treating as success."
+            else
+              echo "::error::Tag ${TAG} was created concurrently but points at ${VERIFY_SHA:-<unknown>}, not HEAD ${HEAD_SHA}."
+              echo "::error::Another actor tagged a different commit. This release is orphaned. Delete the stale tag and re-run:"
+              echo "::error::  git push origin --delete ${TAG}"
+              exit 1
+            fi
           else
             exit $PUSH_STATUS
           fi
