@@ -141,7 +141,7 @@ jobs:
           # clean unindented markdown body.
           BODY="$(printf '%s\n\n%s\n\n%s' \
             "Automated release PR created by \`release.yml\`. Bumps package.json (and package-lock.json, if present) to \`v${VERSION}\`." \
-            "Once this PR merges to main, \`tag-on-main.yml\` creates the matching \`v${VERSION}\` tag, which triggers \`publish.yml\` to publish the package to npm." \
+            "Once this PR merges to main, \`tag-on-main.yml\` creates the matching \`v${VERSION}\` tag. After the tag lands, dispatch \`publish.yml\` against \`v${VERSION}\` via Actions to publish the package to npm (see README \`## Releasing\` for why this step is manual)." \
             "Review the diff for any surprises (package-lock.json regeneration drift, etc.) before approving.")"
 
           if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
