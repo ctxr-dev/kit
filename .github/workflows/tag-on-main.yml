@@ -60,7 +60,15 @@ jobs:
         id: version
         env:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        # GitHub Actions runs each `run:` step under `bash -e` by
+        # default. We want `pipefail` too so `git show ... | node`
+        # below fails loudly when upstream fails (instead of silently
+        # passing empty input through). `-u` catches unset-variable
+        # typos. The `|| true` on `git show` remains the explicit
+        # opt-out for the one case where absence is intentional.
+        shell: bash
         run: |
+          set -euo pipefail
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           TAG="v${CURRENT_VERSION}"
           echo "version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
