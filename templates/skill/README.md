@@ -20,7 +20,7 @@ Releases are PR-gated. Version bumps land on `main` through a review gate like a
 
 - Repository secret `NPM_TOKEN` set to an npm access token with publish rights on this package's scope (`npm token create`, then **Settings → Secrets → Actions**).
 - (Optional, recommended) GitHub-managed CodeQL default setup: **Security → Code security** → enable default setup for `javascript-typescript` and `actions`.
-- Enable **Allow GitHub Actions to create and approve pull requests** at the org level (**Settings → Actions → General → Workflow permissions**). Without this, `release.yml` fails with `GitHub Actions is not permitted to create or approve pull requests`.
+- In this repository, enable **Allow GitHub Actions to create and approve pull requests** under **Settings → Actions → General → Workflow permissions**. If the option is greyed out, an organization-level Actions policy is restricting it — an org admin must unlock the setting first. Without this, `release.yml` fails with `GitHub Actions is not permitted to create or approve pull requests`.
 
 ### Cutting a release
 
