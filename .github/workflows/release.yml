@@ -122,11 +122,19 @@ jobs:
         run: |
           VERSION="${{ steps.bump.outputs.version }}"
           BRANCH="${{ steps.bump.outputs.branch }}"
-          BODY="Automated release PR created by \`release.yml\`. Bumps package.json (and package-lock.json, if present) to \`v${VERSION}\`.
-
-          Once this PR merges to main, \`tag-on-main.yml\` creates the matching \`v${VERSION}\` tag, which triggers \`publish.yml\` to publish the package to npm.
-
-          Review the diff for any surprises (package-lock.json regeneration drift, etc.) before approving."
+          # Assemble the PR body with printf so every paragraph
+          # sits at column 0 in the final string. A previous
+          # attempt used a single "..." string split across lines,
+          # which preserved the yaml-script indentation on every
+          # continuation line and made GitHub render the PR body
+          # as an indented code block (4+ leading spaces = <pre>).
+          # printf with explicit \n\n separators keeps the source
+          # readable under yaml indent rules while emitting a
+          # clean unindented markdown body.
+          BODY="$(printf '%s\n\n%s\n\n%s' \
+            "Automated release PR created by \`release.yml\`. Bumps package.json (and package-lock.json, if present) to \`v${VERSION}\`." \
+            "Once this PR merges to main, \`tag-on-main.yml\` creates the matching \`v${VERSION}\` tag, which triggers \`publish.yml\` to publish the package to npm." \
+            "Review the diff for any surprises (package-lock.json regeneration drift, etc.) before approving.")"
 
           if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
             gh pr edit "$BRANCH" --title "release: v${VERSION}" --body "$BODY"

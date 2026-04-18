@@ -40,12 +40,16 @@ jobs:
 
       # Defense in depth: CI already ran on the release PR before
       # merge, but the tag push fires from main regardless of how
-      # it got there. Re-running the same checks here means a
-      # compromised or bypassed PR path cannot silently publish.
+      # it got there. Re-run the scripts CI actually runs
+      # (ci.yml: test:unit, test:integration, test:e2e) plus
+      # `validate` as extra safety, so a compromised or bypassed
+      # PR path cannot silently publish. The probe skips any
+      # script the package.json doesn't declare, so the list is
+      # safe to keep in sync with ci.yml without coupling here.
       - name: Run checks
         run: |
           FAILED=0
-          for check in lint validate test; do
+          for check in lint validate test:unit test:integration test:e2e; do
             if node -e "process.exit((require('./package.json').scripts||{})['$check']?0:1)" 2>/dev/null; then
               echo "::group::npm run $check"
               if ! npm run "$check"; then

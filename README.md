@@ -329,7 +329,7 @@ From **Run workflow** to **published on npm** is one dispatch + one PR merge.
   git push origin --delete vX.Y.Z
   ```
 
-  Then push an empty commit to `main` (or re-merge anything) to retrigger `tag-on-main`.
+  Then merge a trivial no-op PR to `main` (or revert-and-re-merge the release PR) to retrigger `tag-on-main`. Direct pushes to `main` may be blocked by branch protection, so the PR path is the reliable retrigger.
 - **`publish.yml` fails on "Verify tag matches package.json"** — tag and `package.json` disagree. Investigate the merge commit; this should not happen under the PR-based flow.
 - **GitHub Actions is not permitted to create pull requests** — org or enterprise policy blocks the `GITHUB_TOKEN` from opening PRs. Enable **Allow GitHub Actions to create and approve pull requests** at the org level (**Settings → Actions → General → Workflow permissions**), or ask the enterprise admin to unlock the setting.
 
