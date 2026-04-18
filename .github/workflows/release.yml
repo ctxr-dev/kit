@@ -144,9 +144,16 @@ jobs:
             "Once this PR merges to main, \`tag-on-main.yml\` creates the matching \`v${VERSION}\` tag. After the tag lands, dispatch \`publish.yml\` against \`v${VERSION}\` via Actions to publish the package to npm (see README \`## Releasing\` for why this step is manual)." \
             "Review the diff for any surprises (package-lock.json regeneration drift, etc.) before approving.")"
 
-          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
-            gh pr edit "$BRANCH" --title "release: v${VERSION}" --body "$BODY"
-            echo "Updated existing release PR for $BRANCH"
+          # `gh pr view "$BRANCH"` matches closed/merged PRs too, so
+          # a previous release attempt that left a closed PR on the
+          # same head branch would cause this step to silently edit
+          # the closed PR and never open a new one — the operator
+          # would see the workflow succeed but have no PR to merge.
+          # Filter explicitly to open PRs for this head branch.
+          OPEN_PR_NUMBER="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+          if [ -n "$OPEN_PR_NUMBER" ]; then
+            gh pr edit "$OPEN_PR_NUMBER" --title "release: v${VERSION}" --body "$BODY"
+            echo "Updated existing open release PR #$OPEN_PR_NUMBER for $BRANCH"
           else
             gh pr create \
               --base main \
