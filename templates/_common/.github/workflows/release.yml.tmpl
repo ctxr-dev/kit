@@ -7,7 +7,15 @@ name: Release
 # thread resolution — whatever is enabled) exactly like any other
 # change: the bot does not push directly to main. Once the PR
 # merges, a separate `tag-on-main.yml` workflow creates the matching
-# `v<version>` tag, which in turn fires `publish.yml`.
+# `v<version>` tag.
+#
+# Publishing does NOT auto-chain: tags pushed with the default
+# `GITHUB_TOKEN` do not trigger `on: push: tags` workflows (GitHub
+# design, to prevent workflow recursion). After the tag lands,
+# dispatch `publish.yml` against the tag via the Actions UI (see
+# the README `## Releasing` section). To remove that manual step,
+# swap the tag-push credential in `tag-on-main.yml` for a GitHub
+# App token or fine-grained PAT.
 
 on:
   workflow_dispatch:

@@ -6,8 +6,13 @@ name: Tag release on main
 # Non-release commits are a fast no-op.
 #
 # The paired `release.yml` workflow opens a bump PR; merging that
-# PR triggers this workflow, which then creates the tag, which
-# then triggers `publish.yml` (push: tags: ["v*"]).
+# PR triggers this workflow, which then creates the tag. The tag
+# push does NOT auto-trigger `publish.yml`: the default
+# `GITHUB_TOKEN` cannot fire other workflows (GitHub design, to
+# prevent workflow recursion). Publishing is a separate manual
+# `workflow_dispatch` on the tag, documented in README
+# `## Releasing`. Swap this step's credential for a GitHub App
+# token or PAT to remove the manual step.
 #
 # Why the version-change gate: without it, any non-release commit
 # landing on main after a release would see the existing
