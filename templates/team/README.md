@@ -42,7 +42,7 @@ From **Run workflow** on Release to **published on npm** is one dispatch + one P
 
 - **Release fails with "dispatched from non-main ref"** — select `main` in the Actions UI and re-dispatch.
 - **`tag-on-main` fails with "Tag vX.Y.Z exists but points at …"** — a stale tag from a prior failed run. Delete it (`git push origin --delete vX.Y.Z`) and re-trigger.
-- **`publish.yml` fails on tag/version mismatch** — investigate the merge commit; should not happen under the PR-based flow.
+- **`publish.yml` fails on "Verify version matches tag"** — tag and `package.json` disagree. Investigate the merge commit; should not happen under the PR-based flow.
 
 ## License
 
