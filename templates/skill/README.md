@@ -28,9 +28,11 @@ Releases are PR-gated. Version bumps land on `main` through a review gate like a
 2. The workflow bumps `package.json` on a `release/v<version>` branch and opens a PR.
 3. Review + merge the PR.
 4. `tag-on-main.yml` fires on the merge, detects the version change, creates the annotated `v<version>` tag, and pushes it.
-5. The tag push triggers `publish.yml`, which runs checks, verifies tag/version agreement, and publishes the package to npm.
+5. On the newly created `v<version>` tag, **Actions → Publish to npm → Run workflow**. The workflow re-runs the check pipeline, verifies tag/version agreement, and publishes the package to npm.
 
-From **Run workflow** to **published on npm** is one dispatch + one PR merge.
+> **Why a manual dispatch for step 5?** GitHub's built-in `GITHUB_TOKEN` cannot trigger further workflows, so the `v<version>` tag created by `tag-on-main.yml` does NOT automatically fire `publish.yml`. A one-click dispatch on the tag works around it. To fully automate, swap the tag-push credential in `tag-on-main.yml` for a GitHub App token or fine-grained PAT (stored as a repo secret) — then the `push: tags` trigger on `publish.yml` fires and step 5 happens by itself.
+
+From **Run workflow** on Release to **published on npm** is one dispatch + one PR merge + one dispatch (or one dispatch + one PR merge, once a PAT/App-token is wired in).
 
 ### Troubleshooting
 
