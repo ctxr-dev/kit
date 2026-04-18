@@ -69,7 +69,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          # No `cache: npm` here: this job only runs `npm version
+          # --no-git-tag-version --ignore-scripts`, which touches
+          # package.json/package-lock.json but never installs
+          # anything. Caching would add setup overhead with no
+          # install step to benefit from it.
 
       - name: Configure git
         run: |

@@ -56,10 +56,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          # Match the caching used by ci.yml / publish.yml so
-          # cold-start time on every push to main is consistent
-          # across workflows.
-          cache: npm
+          # No `cache: npm` here: this job only uses `node -p` to
+          # read package.json and `git show ... | node` to extract
+          # the previous version. It never runs npm install/ci, so
+          # caching would add setup overhead with no install step
+          # to benefit from it.
 
       - name: Detect whether this push changed the package version
         id: version
