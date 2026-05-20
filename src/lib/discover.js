@@ -21,7 +21,6 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
-  lstatSync,
   openSync,
   readFileSync,
   renameSync,

@@ -130,7 +130,12 @@ export function installFile(opts) {
       if (r.warning) {
         process.stderr.write(`warning: ${r.warning}\n`);
       }
-      if (r.created) {
+      // Record the mirror whenever it is a valid kit-owned mirror: a fresh
+      // create, OR a `noop` with no warning (the mirror already existed and
+      // is correct). A `noop` WITH a warning means the path was refused (a
+      // real dir/file not owned by kit) and must not be recorded, else
+      // `kit remove` would later try to clean up a path it doesn't own.
+      if (r.created || (r.kind === "noop" && !r.warning)) {
         createdMirrors.push(mirrorPath);
       }
     } catch (err) {

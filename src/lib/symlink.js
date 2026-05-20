@@ -5,9 +5,10 @@
  * `~/.agents/<type>/<name>/` (user). For harnesses that don't read `.agents/`
  * natively (Claude Code: `.claude/<type>/`; Codex CLI user-scope: `~/.codex/<type>/`)
  * kit creates a discovery mirror as a symlink so the harness still finds the
- * artefact. Project mirrors use relative targets so a repo can be checked in
- * and cloned; user mirrors use absolute targets because they cross parent
- * trees (`~/.agents/skills/foo` vs `~/.claude/skills/foo`).
+ * artefact. Mirrors use relative targets by default — portable for checked-in
+ * repos and for sibling `~/.agents` vs `~/.claude` trees alike — falling back
+ * to absolute targets only when the relative path would be pathologically
+ * deep (more than 4 `..` segments). See `defaultLinkStrategy()`.
  *
  * Windows fallback chain on EPERM (no developer-mode / no admin):
  *   - folder mirrors → directory junction (`fs.symlinkSync(target, path, 'junction')`)
@@ -27,30 +28,28 @@ import {
   linkSync,
   lstatSync,
   mkdirSync,
-  readlinkSync,
   realpathSync,
   rmSync,
-  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname, relative } from "node:path";
 
 const SENTINEL_SUFFIX = ".ctxr-mirror";
 
 /**
  * Decide whether to use relative or absolute symlink target.
  *
- * Project mirrors (mirror under `<projectPath>/.claude/...` pointing to
- * `<projectPath>/.agents/...`) use relative targets so cloning the repo
- * preserves the link. User mirrors (mirror under `~/.claude/...` pointing
- * to `~/.agents/...`) use absolute targets because crossing tree roots
- * with `..` segments hurts readability and the path has no portability
- * requirement.
+ * Both project mirrors (mirror under `<projectPath>/.claude/...` pointing to
+ * `<projectPath>/.agents/...`) and user mirrors (mirror under `~/.claude/...`
+ * pointing to `~/.agents/...`) use relative targets by default. Relative
+ * targets keep checked-in repos portable and keep sibling `~/.agents` vs
+ * `~/.claude` trees readable.
  *
- * Heuristic: if mirror and canonical share a common ancestor that is NOT
- * the user's home directory and is at least two segments deep, prefer
- * relative. Otherwise absolute. The caller can override via opts.
+ * Heuristic: compute the relative path from the mirror's directory to the
+ * canonical path; use it unless it would be pathologically deep (more than
+ * 4 `..` segments), in which case fall back to an absolute target. The
+ * caller can override via opts.
  */
 function defaultLinkStrategy({ canonicalPath, mirrorPath }) {
   const mirrorDir = dirname(mirrorPath);

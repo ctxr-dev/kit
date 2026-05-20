@@ -197,7 +197,7 @@ export function resolveType(pkgJson) {
  * @param {string} projectPath — absolute project root
  * @param {object} opts
  * @param {string} [opts.dir] — explicit target path (takes precedence over --user)
- * @param {boolean} [opts.user] — install to ~/.claude/<typeCfg.userDir>
+ * @param {boolean} [opts.user] — install to ~/.agents/<typeCfg.userDir>
  * @param {object} opts.typeCfg — entry from ARTIFACT_TYPES
  * @param {(p: string) => boolean} [opts.existsCheck] — override for filesystem probe (defaults to node:fs existsSync; tests may inject a fake)
  * @returns {string} absolute directory path

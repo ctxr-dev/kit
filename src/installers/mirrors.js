@@ -12,7 +12,7 @@
  */
 
 import { homedir } from "node:os";
-import { basename, isAbsolute, join, normalize, resolve, sep } from "node:path";
+import { join, normalize, sep } from "node:path";
 
 /**
  * Decide whether `targetRoot` is a canonical project, canonical user, or

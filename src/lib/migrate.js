@@ -4,11 +4,12 @@
  * Pre-flip kit installed every artefact under `<projectPath>/.claude/<type>/`
  * with a manifest at `<projectPath>/.claude/<type>/.ctxr-manifest.json`. After
  * the canonical-paths flip the canonical location is `<projectPath>/.agents/<type>/`.
- * On every `install` and `update` call this helper walks every legacy manifest
- * row and, when the legacy directory is a real (non-symlink) folder, moves it
- * to the canonical path, replaces the original with a symlink (so Claude Code
- * still discovers it), and migrates the manifest row. Idempotent: re-running
- * after migration is a no-op.
+ * On every `install` call this helper walks every legacy manifest row and,
+ * when the legacy directory is a real (non-symlink) folder, moves it to the
+ * canonical path, replaces the original with a symlink (so Claude Code still
+ * discovers it), and migrates the manifest row. `update` intentionally does
+ * NOT auto-migrate, to preserve user-deliberate layouts. Idempotent:
+ * re-running after migration is a no-op.
  *
  * Migration is best-effort. A row whose move fails is left in place with a
  * one-line warning. Manifest writes use the same atomic temp+fsync+rename
@@ -124,6 +125,13 @@ function migrateOneRow({
   // anchor).
   const newEntry = {
     ...legacyEntry,
+    installedPaths: [canonicalDir],
+    discoveryMirrors: Array.from(
+      new Set([
+        ...(Array.isArray(legacyEntry.discoveryMirrors) ? legacyEntry.discoveryMirrors : []),
+        legacyDir,
+      ]),
+    ),
     migratedFrom: legacyRelLabel,
     updatedAt: new Date().toISOString(),
   };
