@@ -66,8 +66,9 @@ const PREAMBLE =
  *
  * - Newlines, carriage returns, and tabs collapse to a single space.
  * - Backticks are removed (they would break the row regex on parse-back).
- * - HTML/XML comment delimiters `<!--` / `-->` lose their dashes so a row
- *   value cannot mimic the section markers.
+ * - HTML/XML comment delimiters `<!--` / `-->` (and the HTML5 variant
+ *   `--!>`, which strict HTML5 parsers also accept as a comment end)
+ *   lose their dashes so a row value cannot mimic the section markers.
  * - Length is capped at 200 chars (matches the npm package.json description
  *   convention) so a megabyte of garbage cannot bloat AGENTS.md.
  */
@@ -75,7 +76,11 @@ function sanitizeRowValue(s, fallback = "") {
   if (typeof s !== "string") return fallback;
   let v = s.replace(/[\r\n\t]+/g, " ");
   v = v.replace(/`/g, "");
-  v = v.replace(/<!--/g, "&lt;!--").replace(/-->/g, "--&gt;");
+  // HTML5 accepts BOTH `-->` and `--!>` as comment terminators (per
+  // tokenisation spec §13.2.5.43). Strict parsers will close the section
+  // on either. The `!?` matches the optional bang so both variants are
+  // neutralised to `--&gt;` in the row body.
+  v = v.replace(/<!--/g, "&lt;!--").replace(/--!?>/g, "--&gt;");
   v = v.trim();
   if (v.length > 200) v = v.slice(0, 197) + "...";
   return v.length > 0 ? v : fallback;

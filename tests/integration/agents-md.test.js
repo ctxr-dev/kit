@@ -134,10 +134,13 @@ describe("AGENTS.md unit-level upsert/remove", () => {
     assert.equal(before, after);
   });
 
-  it("sanitises hostile description (end marker, newlines, backticks, >200 chars) and re-parses cleanly", () => {
+  it("sanitises hostile description (end marker, newlines, backticks, >200 chars, HTML5 --!> variant) and re-parses cleanly", () => {
     const hostile =
       `evil ${MARKER_END} oops\n\rinjected line\n` +
       "back`ticks` and <!--HTML--> and -->end<!-- " +
+      // HTML5 also accepts `--!>` as a comment terminator — strict
+      // HTML5 parsers will close the section on this variant too.
+      "html5end--!>x " +
       "x".repeat(400);
     upsertSkillRow({
       projectPath: projectDir,
@@ -155,6 +158,8 @@ describe("AGENTS.md unit-level upsert/remove", () => {
     assert.ok(!body.includes("back`ticks`"));
     // Comment-marker dashes are neutralised inside the row body.
     assert.ok(!/\sevil <!-- ctxr:skills:end -->/.test(body));
+    // HTML5 `--!>` variant also gets neutralised (CodeQL js/bad-tag-filter).
+    assert.ok(!body.includes("--!>"), `Expected --!> to be sanitised; body: ${body.slice(0, 400)}`);
     // Re-parse: a second upsert finds and replaces the same row.
     const r2 = upsertSkillRow({
       projectPath: projectDir,
