@@ -1,12 +1,14 @@
 # {{titleName}}
 
-A Claude Code skill.
+An Agent Skills skill (Claude Code, Codex CLI).
 
 ## Installation
 
 ```bash
 npx @ctxr/kit install @ctxr/{{name}}
 ```
+
+Installs canonically into `.agents/skills/<name>/`. Claude Code, Codex CLI, and OpenCode users are auto-served via discovery-mirror symlinks created by `@ctxr/kit` at install time — you do not need to mirror anything by hand.
 
 ## Usage
 

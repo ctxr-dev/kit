@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ctxr.dev/schema/subagent-dispatch-v1.schema.json",
+  "title": "subagent.dispatch.v1",
+  "description": "Cross-harness sub-agent dispatch envelope used by Agent Skills (Claude Code, Codex CLI, etc).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["kind", "request_id", "role", "prompt", "inputs", "effort"],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "subagent.dispatch.v1"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique, deterministic id; host returns its result keyed on this id."
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic role of the spawned worker. Harness shim maps to its native sub-agent type."
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Literal prompt the sub-agent receives. Skill ships it ready to dispatch."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Kind-specific structured inputs. Empty object is legal."
+    },
+    "effort": {
+      "type": "string",
+      "enum": ["heavy", "balanced", "light"],
+      "description": "Provider-neutral effort hint."
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Explicit model override. Host harness prefers this when set; otherwise maps effort to its lineup."
+    },
+    "response_schema": {
+      "type": "object",
+      "description": "Free-form shape hint describing the JSON the sub-agent must return; per-skill validation is host-defined and NOT a strict JSON Schema."
+    },
+    "tools": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Allowed tool names for the spawned sub-agent. Empty/omitted means host default."
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Soft cap. Host may shorten to its ceiling."
+    },
+    "parent_run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Links this dispatch to the parent FSM run for tracing."
+    },
+    "outputs_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute path where the sub-agent's JSON response must be written."
+    }
+  },
+  "$defs": {
+    "error": {
+      "$anchor": "error",
+      "title": "subagent.dispatch.error.v1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "request_id", "error_code", "message", "retryable"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "subagent.dispatch.error.v1"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "error_code": {
+          "type": "string",
+          "enum": ["timeout", "model_unavailable", "tool_denied", "harness_internal"]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "batch": {
+      "$anchor": "batch",
+      "title": "subagent.batch.v1",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["kind", "envelopes"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "subagent.batch.v1"
+        },
+        "envelopes": {
+          "type": "array",
+          "minItems": 0,
+          "items": { "$ref": "#" }
+        },
+        "remaining_after": { "type": "integer", "minimum": 0 },
+        "pending_now": { "type": "integer", "minimum": 0 },
+        "total_dispatch_units": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

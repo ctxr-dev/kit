@@ -25,6 +25,8 @@ import { readManifest, writeManifest } from "../lib/discover.js";
  * @param {string|null} [args.integrity]
  * @param {string|null} [args.commit]
  * @param {string[]} args.installedPaths
+ * @param {string[]} [args.discoveryMirrors] — absolute mirror paths created at install
+ * @param {string|null} [args.migratedFrom] — populated when row was migrated from a legacy `.claude/` install
  */
 export function writeArtifactManifest(args) {
   const {
@@ -38,6 +40,8 @@ export function writeArtifactManifest(args) {
     integrity,
     commit,
     installedPaths,
+    discoveryMirrors,
+    migratedFrom,
   } = args;
 
   const manifest = readManifest(targetRoot);
@@ -53,6 +57,12 @@ export function writeArtifactManifest(args) {
   };
   if (integrity) entry.integrity = integrity;
   if (commit) entry.commit = commit;
+  if (Array.isArray(discoveryMirrors) && discoveryMirrors.length > 0) {
+    entry.discoveryMirrors = discoveryMirrors;
+  }
+  if (typeof migratedFrom === "string" && migratedFrom.length > 0) {
+    entry.migratedFrom = migratedFrom;
+  }
   manifest[installedName] = entry;
   writeManifest(targetRoot, manifest);
   return entry;

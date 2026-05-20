@@ -4,7 +4,9 @@ import { spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   existsSync,
+  lstatSync,
   readFileSync,
+  realpathSync,
   mkdirSync,
   symlinkSync,
   writeFileSync,
@@ -258,15 +260,85 @@ describe("install command", () => {
   });
 
   describe("--user flag", () => {
-    it("installs to fakeHome ~/.claude/<type>/", () => {
-      // valid-skill is a skill → ~/.claude/skills/
+    it("installs canonical to ~/.agents/<type>/ with mirrors at ~/.claude/ and ~/.codex/", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
       const { exitCode } = install(
         `${join(FIXTURES, "skill", "valid")} --user`,
       );
       assert.equal(exitCode, 0);
 
-      const userSkillDir = join(fakeHome, ".claude", "skills", "valid-skill");
-      assert.ok(existsSync(join(userSkillDir, "SKILL.md")));
+      const canonical = join(fakeHome, ".agents", "skills", "valid-skill");
+      assert.ok(existsSync(join(canonical, "SKILL.md")), "canonical SKILL.md");
+      // The lstat on the canonical path must NOT be a symlink — it's the real dir.
+      assert.equal(lstatSync(canonical).isSymbolicLink(), false);
+
+      // Mirrors at ~/.claude/skills/ and ~/.codex/skills/ are symlinks.
+      const claudeMirror = join(fakeHome, ".claude", "skills", "valid-skill");
+      const codexMirror = join(fakeHome, ".codex", "skills", "valid-skill");
+      assert.equal(lstatSync(claudeMirror).isSymbolicLink(), true);
+      assert.equal(lstatSync(codexMirror).isSymbolicLink(), true);
+      // Mirrors resolve to the canonical.
+      assert.equal(realpathSync(claudeMirror), realpathSync(canonical));
+      assert.equal(realpathSync(codexMirror), realpathSync(canonical));
+    });
+
+    it("manifest entry records discoveryMirrors", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
+      install(`${join(FIXTURES, "skill", "valid")} --user`);
+      const manifest = JSON.parse(
+        readFileSync(
+          join(fakeHome, ".agents", "skills", ".ctxr-manifest.json"),
+          "utf8",
+        ),
+      );
+      const entry = manifest["valid-skill"];
+      assert.ok(entry);
+      assert.ok(Array.isArray(entry.discoveryMirrors));
+      assert.equal(entry.discoveryMirrors.length, 2);
+    });
+  });
+
+  describe("project-scope auto-default", () => {
+    it("installs canonical to <project>/.agents/<type>/ with .claude mirror", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
+      // Run from inside projectDir so the auto-default picks .agents under it.
+      const r = spawnSync(
+        "node",
+        [CLI, "install", join(FIXTURES, "skill", "valid")],
+        {
+          encoding: "utf8",
+          env: { ...process.env, HOME: fakeHome, CI: "true" },
+          cwd: projectDir,
+        },
+      );
+      assert.equal(r.status, 0, `stderr: ${r.stderr}`);
+
+      const canonical = join(projectDir, ".agents", "skills", "valid-skill");
+      assert.ok(existsSync(join(canonical, "SKILL.md")));
+      assert.equal(lstatSync(canonical).isSymbolicLink(), false);
+
+      const claudeMirror = join(projectDir, ".claude", "skills", "valid-skill");
+      assert.equal(lstatSync(claudeMirror).isSymbolicLink(), true);
+      assert.equal(realpathSync(claudeMirror), realpathSync(canonical));
+    });
+  });
+
+  describe("--dir flag skips mirror emission", () => {
+    it("custom --dir does NOT create .claude/ mirror", () => {
+      const targetDir = join(projectDir, "custom-skills");
+      const { exitCode } = install(
+        `${join(FIXTURES, "skill", "valid")} --dir ${targetDir}`,
+      );
+      assert.equal(exitCode, 0);
+      assert.ok(existsSync(join(targetDir, "valid-skill", "SKILL.md")));
+      // No .claude/ mirror should appear when user explicitly named --dir.
+      assert.equal(existsSync(join(projectDir, ".claude")), false);
     });
   });
 

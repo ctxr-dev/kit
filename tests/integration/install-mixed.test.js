@@ -52,7 +52,7 @@ describe("kit install — mixed types in one command", () => {
   });
 
   it("installs skill + agent + rule + command in one invocation (default dirs)", () => {
-    // No --dir → each type lands in its own default .claude/<typeDir>/.
+    // No --dir → each type lands in its own canonical .agents/<typeDir>/.
     const r = cli(
       [
         join(FIXTURES, "skill", "valid"),
@@ -79,28 +79,28 @@ describe("kit install — mixed types in one command", () => {
       existsSync(join(projectDir, ".claude", "commands", "ctxr-command-valid.md")),
     );
 
-    // Each type dir has its own manifest with the correct entry
+    // Each type dir has its own manifest at the canonical .agents/ location
     const skillManifest = JSON.parse(
       readFileSync(
-        join(projectDir, ".claude", "skills", ".ctxr-manifest.json"),
+        join(projectDir, ".agents", "skills", ".ctxr-manifest.json"),
         "utf8",
       ),
     );
     const agentManifest = JSON.parse(
       readFileSync(
-        join(projectDir, ".claude", "agents", ".ctxr-manifest.json"),
+        join(projectDir, ".agents", "agents", ".ctxr-manifest.json"),
         "utf8",
       ),
     );
     const ruleManifest = JSON.parse(
       readFileSync(
-        join(projectDir, ".claude", "rules", ".ctxr-manifest.json"),
+        join(projectDir, ".agents", "rules", ".ctxr-manifest.json"),
         "utf8",
       ),
     );
     const commandManifest = JSON.parse(
       readFileSync(
-        join(projectDir, ".claude", "commands", ".ctxr-manifest.json"),
+        join(projectDir, ".agents", "commands", ".ctxr-manifest.json"),
         "utf8",
       ),
     );

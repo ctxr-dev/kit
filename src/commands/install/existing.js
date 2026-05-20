@@ -34,7 +34,6 @@ import { isAbsolute, join, resolve, sep } from "node:path";
 import { readManifest, writeManifest } from "../../lib/discover.js";
 import {
   STRATEGY_PROJECT_AGENTS,
-  STRATEGY_PROJECT_CLAUDE,
   STRATEGY_USER_GLOBAL,
   strategyToTarget,
   validateCustomPath,
@@ -86,18 +85,23 @@ export function isPathContained(target, match, projectPath) {
   try {
     const abs = resolve(target);
     const projectAbs = resolve(projectPath);
+    const userAgentsBase = join(homedir(), ".agents");
     const userClaudeBase = join(homedir(), ".claude");
+    const userCodexBase = join(homedir(), ".codex");
     const matchDirAbs = resolve(match.dir);
     // Accept any path that is under the project root passed to install,
-    // under the user's `~/.claude/`, or under the manifest's own
-    // directory. The manifest dir is trusted because it was discovered
-    // by findArtifactAcrossTypes, which only walks kit's known type
-    // directories.
+    // under the user's `~/.agents/` (canonical), `~/.claude/` or `~/.codex/`
+    // (legacy / per-client mirrors), or under the manifest's own directory.
+    // The manifest dir is trusted because it was discovered by
+    // findArtifactAcrossTypes, which only walks kit's known type directories.
+    const containsBase = (base) =>
+      abs === base || abs.startsWith(base + sep);
     return (
       abs === projectAbs ||
       abs.startsWith(projectAbs + sep) ||
-      abs === userClaudeBase ||
-      abs.startsWith(userClaudeBase + sep) ||
+      containsBase(userAgentsBase) ||
+      containsBase(userClaudeBase) ||
+      containsBase(userCodexBase) ||
       abs === matchDirAbs ||
       abs.startsWith(matchDirAbs + sep)
     );
@@ -210,7 +214,6 @@ export function buildPerItemMenuOptions(
   };
 
   const options = [
-    addLabel(STRATEGY_PROJECT_CLAUDE),
     addLabel(STRATEGY_PROJECT_AGENTS),
     addLabel(STRATEGY_USER_GLOBAL),
   ].filter((o) => o !== null);

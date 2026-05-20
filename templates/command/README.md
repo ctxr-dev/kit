@@ -1,6 +1,6 @@
 # {{titleName}}
 
-A Claude Code slash command.
+An Agent Skills slash command (Claude Code, Codex CLI).
 
 ## Installation
 
@@ -8,11 +8,13 @@ A Claude Code slash command.
 npx @ctxr/kit install @ctxr/{{name}}
 ```
 
-Installs as a single `.md` file into `.claude/commands/`.
+Installs as a single `.md` file into `.agents/commands/<name>.md`.
+
+> Claude Code, Codex CLI, and OpenCode users are auto-served via discovery-mirror symlinks created by `@ctxr/kit` at install time — you do not need to mirror anything by hand.
 
 ## Usage
 
-Invoke from Claude Code with `/{{name}}`.
+Invoke from your harness with `/{{name}}`.
 
 ## Releasing
 

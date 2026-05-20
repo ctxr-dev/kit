@@ -1,6 +1,6 @@
 # {{titleName}}
 
-A Claude Code agent.
+An Agent Skills agent (Claude Code, Codex CLI).
 
 ## Installation
 
@@ -8,11 +8,13 @@ A Claude Code agent.
 npx @ctxr/kit install @ctxr/{{name}}
 ```
 
-Installs as a single `.md` file into `.claude/agents/`.
+Installs as a single `.md` file into `.agents/agents/<name>.md`.
+
+> Claude Code, Codex CLI, and OpenCode users are auto-served via discovery-mirror symlinks created by `@ctxr/kit` at install time — you do not need to mirror anything by hand.
 
 ## Usage
 
-Describe how Claude Code should invoke this agent.
+Describe how the host harness should invoke this agent.
 
 ## Releasing
 

@@ -1,13 +1,18 @@
 /**
  * target: "folder" installer.
  *
- * Creates `.claude/<typeDir>/<installedName>/` and copies every file in
+ * Creates `.agents/<typeDir>/<installedName>/` and copies every file in
  * `packagePayload()` into it verbatim, preserving relative paths. The
  * full npm payload is installed as-is — package.json, README, LICENSE,
  * CHANGELOG, and any other shipped files. Bundle runtime code can
  * therefore read its own package.json from the installed directory
  * (e.g. to resolve its own name/version), rather than depending on
  * hard-coded constants that drift from the manifest.
+ *
+ * After the canonical write, kit creates discovery-mirror symlinks at
+ * legacy / per-client paths (`.claude/<type>/<name>` etc) so harnesses
+ * that don't read `.agents/` natively still find the artefact. See
+ * `src/lib/symlink.js` and `src/installers/mirrors.js`.
  *
  * Writes a type-aware manifest entry keyed by `installedName`.
  *
@@ -37,8 +42,10 @@
 import { cpSync, existsSync, lstatSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { packagePayload } from "../lib/payload.js";
+import { ensureMirror } from "../lib/symlink.js";
 import { installedName } from "../lib/types.js";
 import { writeArtifactManifest } from "./manifest-writer.js";
+import { resolveMirrorPaths } from "./mirrors.js";
 
 /**
  * Install a folder-target artifact.
@@ -53,7 +60,9 @@ import { writeArtifactManifest } from "./manifest-writer.js";
  * @param {string|null} opts.version
  * @param {string|null} [opts.integrity]
  * @param {string|null} [opts.commit]
- * @returns {{ installedName: string, installedPaths: string[] }}
+ * @param {object} [opts.typeCfg] — ARTIFACT_TYPES entry; used to compute discovery mirrors
+ * @param {string} [opts.projectPath] — absolute project root; used to resolve project mirrors
+ * @returns {{ installedName: string, installedPaths: string[], discoveryMirrors: string[] }}
  */
 export function installFolder(opts) {
   const {
@@ -66,6 +75,8 @@ export function installFolder(opts) {
     version,
     integrity,
     commit,
+    typeCfg,
+    projectPath,
   } = opts;
 
   const name = installedName(packageName);
@@ -113,6 +124,39 @@ export function installFolder(opts) {
     throw new Error(`Failed to copy package files: ${err.message}`);
   }
 
+  // Discovery mirrors: only emitted when the canonical destination is under
+  // a recognised `.agents/<type>/` or `~/.agents/<type>/` root and typeCfg
+  // is supplied. Custom `--dir` installs skip this by design.
+  const mirrorTargets =
+    typeCfg && projectPath
+      ? resolveMirrorPaths({
+          targetRoot,
+          projectPath,
+          discoveryMirrors: typeCfg.discoveryMirrors,
+          basenameToMirror: name,
+        })
+      : [];
+  const createdMirrors = [];
+  for (const mirrorPath of mirrorTargets) {
+    try {
+      const r = ensureMirror({
+        canonicalPath: destDir,
+        mirrorPath,
+        target: "folder",
+      });
+      if (r.warning) {
+        process.stderr.write(`warning: ${r.warning}\n`);
+      }
+      if (r.created) {
+        createdMirrors.push(mirrorPath);
+      }
+    } catch (err) {
+      process.stderr.write(
+        `warning: failed to create discovery mirror at ${mirrorPath}: ${err.message}\n`,
+      );
+    }
+  }
+
   writeArtifactManifest({
     targetRoot,
     installedName: name,
@@ -124,7 +168,12 @@ export function installFolder(opts) {
     integrity,
     commit,
     installedPaths: [destDir],
+    discoveryMirrors: createdMirrors,
   });
 
-  return { installedName: name, installedPaths: [destDir] };
+  return {
+    installedName: name,
+    installedPaths: [destDir],
+    discoveryMirrors: createdMirrors,
+  };
 }

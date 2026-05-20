@@ -103,19 +103,23 @@ function cleanupSnapshot(snapshot) {
  * exact original location. Teams can't use `--dir` because the flag would
  * cascade to every member and stuff them into the team manifest directory
  * — instead we translate user-scope teams to `--user` and let project-scope
- * teams fall back to the default `.claude/teams/` location.
+ * teams fall back to the default `.agents/teams/` location.
  *
- * "User scope" for a team is defined as living under `~/.claude/teams/`
- * specifically — NOT just "any path under $HOME". A project whose root
- * happens to live under `$HOME` (e.g. `~/projects/myrepo`) would otherwise
- * be misclassified and its project-scope team entry would get re-installed
- * as user-global on update.
+ * "User scope" for a team is defined as living under `~/.agents/teams/` or
+ * the legacy `~/.claude/teams/` specifically — NOT just "any path under
+ * $HOME". A project whose root happens to live under `$HOME` (e.g.
+ * `~/projects/myrepo`) would otherwise be misclassified and its
+ * project-scope team entry would get re-installed as user-global on update.
  */
 function scopeFlagsForEntry(dir, { isTeam } = {}) {
   if (isTeam) {
-    const userTeamsBase = join(homedir(), ".claude", "teams");
-    const isUserTeam = dir === userTeamsBase || dir.startsWith(userTeamsBase + sep);
-    return isUserTeam ? ["--user"] : [];
+    const userTeamsAgents = join(homedir(), ".agents", "teams");
+    const userTeamsClaude = join(homedir(), ".claude", "teams");
+    const isUnder = (base) => dir === base || dir.startsWith(base + sep);
+    if (isUnder(userTeamsAgents) || isUnder(userTeamsClaude)) {
+      return ["--user"];
+    }
+    return [];
   }
   return ["--dir", dir];
 }
@@ -337,7 +341,7 @@ function printUsage() {
   console.error("  -y, --yes          Skip prompts (forwarded to install for missing items)");
   console.error("  -i, --interactive  Force interactive mode (forwarded to install)");
   console.error("  --dir <path>       Override destination for installs of missing items");
-  console.error("  --user             Install missing items user-global (~/.claude/<type>/)");
+  console.error("  --user             Install missing items user-global (~/.agents/<type>/)");
   console.error("  -h, --help         Show this help");
   console.error("");
   console.error("Examples:");
@@ -354,6 +358,15 @@ export default async function update(args, opts = {}) {
     printUsage();
     return;
   }
+
+  // Note: legacy `.claude/<type>/` installs are NOT auto-migrated on
+  // update. Update preserves the on-disk location of the installed
+  // artefact so a user who deliberately placed an install at a custom
+  // `.claude/` path (or a custom `--dir`) is not surprised by a routine
+  // `update` rewriting their layout. Migration runs on `install` only;
+  // `discoverArtifactDirs` continues to surface legacy installs via the
+  // mirror set so update keeps working until an install triggers the
+  // migration.
 
   // Dependency injection: tests can pass `opts.prompt` to supply a mocked
   // prompt module that the delegated install receives when this update

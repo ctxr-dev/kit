@@ -107,9 +107,9 @@ describe("install-interactive — shared destination menu", () => {
     rmSync(fakeHome, { recursive: true, force: true });
   });
 
-  it("renders a menu with exactly four distinct strategy options", async () => {
-    // Answer: pick PROJECT_CLAUDE (the default auto-detect in a fresh project).
-    const prompt = mockPrompt(["project-claude"]);
+  it("renders a menu with exactly three distinct strategy options", async () => {
+    // Default auto-detect resolves to PROJECT_AGENTS in a fresh project.
+    const prompt = mockPrompt(["project-agents"]);
     await installCommand(
       [join(FIXTURES, "skill", "valid")],
       { prompt },
@@ -119,43 +119,44 @@ describe("install-interactive — shared destination menu", () => {
     const values = select.options.map((o) => o.value);
     // Pin cardinality — a regression that adds or removes an option must
     // fail here rather than sneaking through the sort() equality below.
-    assert.equal(values.length, 4, "expected exactly 4 strategy options");
-    // Pin distinctness — catches a duplicate-key regression that sort()
-    // wouldn't notice.
+    assert.equal(values.length, 3, "expected exactly 3 strategy options");
     assert.equal(
       new Set(values).size,
-      4,
-      "expected 4 distinct option values",
+      3,
+      "expected 3 distinct option values",
     );
-    // Pin identity of the 4 options.
     assert.deepEqual(
       [...values].sort(),
-      ["custom", "project-agents", "project-claude", "user-global"].sort(),
+      ["custom", "project-agents", "user-global"].sort(),
     );
-    // Default is the auto-detect — PROJECT_CLAUDE for a fresh project.
-    assert.equal(select.defaultValue, "project-claude");
-    // Skill landed under the project-claude target.
+    // Default is the auto-detect — PROJECT_AGENTS for a fresh project.
+    assert.equal(select.defaultValue, "project-agents");
+    // Skill landed under the canonical .agents/ target.
     assert.ok(
-      existsSync(join(projectDir, ".claude", "skills", "valid-skill", "SKILL.md")),
+      existsSync(join(projectDir, ".agents", "skills", "valid-skill", "SKILL.md")),
     );
   });
 
-  it("PROJECT_AGENTS choice routes the install to .agents/skills/", async () => {
+  it("PROJECT_AGENTS choice routes the install to .agents/skills/", async function (t) {
+    if (process.platform === "win32") {
+      return t.skip("symlink mirrors require POSIX or Windows dev mode");
+    }
     const prompt = mockPrompt(["project-agents"]);
     await installCommand([join(FIXTURES, "skill", "valid")], { prompt });
     assert.ok(
       existsSync(join(projectDir, ".agents", "skills", "valid-skill", "SKILL.md")),
     );
+    // .claude/ mirror is a symlink to the canonical (existsSync follows it).
     assert.ok(
-      !existsSync(join(projectDir, ".claude", "skills", "valid-skill")),
+      existsSync(join(projectDir, ".claude", "skills", "valid-skill")),
     );
   });
 
-  it("USER_GLOBAL choice routes the install to ~/.claude/skills/", async () => {
+  it("USER_GLOBAL choice routes the install to ~/.agents/skills/", async () => {
     const prompt = mockPrompt(["user-global"]);
     await installCommand([join(FIXTURES, "skill", "valid")], { prompt });
     assert.ok(
-      existsSync(join(fakeHome, ".claude", "skills", "valid-skill", "SKILL.md")),
+      existsSync(join(fakeHome, ".agents", "skills", "valid-skill", "SKILL.md")),
     );
   });
 
@@ -183,7 +184,7 @@ describe("install-interactive — shared destination menu", () => {
     const selectCalls = prompt.calls.filter((c) => c.type === "select");
     assert.equal(selectCalls.length, 0, "select should not be called when --user is set");
     assert.ok(
-      existsSync(join(fakeHome, ".claude", "skills", "valid-skill", "SKILL.md")),
+      existsSync(join(fakeHome, ".agents", "skills", "valid-skill", "SKILL.md")),
     );
   });
 
@@ -225,21 +226,21 @@ describe("install-interactive — per-item stay/move prompt", () => {
   });
 
   it("fires per-item stay/move prompt when existing location differs from shared choice", async () => {
-    // First install: user picks project-claude in the shared menu.
-    // The skill lands in .claude/skills/.
+    // First install: user picks project-agents in the shared menu.
+    // The skill lands canonically in .agents/skills/ (with a .claude/ symlink).
     await installCommand(
       [join(FIXTURES, "skill", "valid")],
-      { prompt: mockPrompt(["project-claude"]) },
+      { prompt: mockPrompt(["project-agents"]) },
     );
-    assert.ok(existsSync(join(projectDir, ".claude", "skills", "valid-skill")));
+    assert.ok(existsSync(join(projectDir, ".agents", "skills", "valid-skill")));
 
     // Second install: user picks USER_GLOBAL this time. The skill is
-    // already installed in project-claude, so kit should fire a per-item
-    // prompt asking "keep at .claude/skills/ or move to ~/.claude/skills/?".
+    // already installed in project scope, so kit should fire a per-item
+    // prompt asking "keep at .agents/skills/ or move to ~/.agents/skills/?".
     // The per-item menu includes each strategy's resolved leaf + custom +
     // skip. We answer with the MOVE value shape for user-global.
-    const projectLeaf = join(projectDir, ".claude", "skills", "valid-skill");
-    const userLeaf = join(fakeHome, ".claude", "skills", "valid-skill");
+    const projectLeaf = join(projectDir, ".agents", "skills", "valid-skill");
+    const userLeaf = join(fakeHome, ".agents", "skills", "valid-skill");
 
     const prompt2 = mockPrompt([
       "user-global", // shared menu
@@ -260,7 +261,7 @@ describe("install-interactive — per-item stay/move prompt", () => {
     // Old location removed, new location populated.
     assert.ok(
       !existsSync(projectLeaf),
-      "Old project-claude install should be removed after move",
+      "Old project install should be removed after move",
     );
     assert.ok(
       existsSync(join(userLeaf, "SKILL.md")),
@@ -269,42 +270,42 @@ describe("install-interactive — per-item stay/move prompt", () => {
   });
 
   it("per-item prompt with 'keep' decision updates in place at existing location", async () => {
-    // First install to project-claude.
+    // First install to project-agents.
     await installCommand(
       [join(FIXTURES, "skill", "valid")],
-      { prompt: mockPrompt(["project-claude"]) },
+      { prompt: mockPrompt(["project-agents"]) },
     );
-    const projectLeaf = join(projectDir, ".claude", "skills", "valid-skill");
+    const projectLeaf = join(projectDir, ".agents", "skills", "valid-skill");
     assert.ok(existsSync(projectLeaf));
 
     // Second install: pick USER_GLOBAL in the shared menu, then pick
     // "keep at current location" in the per-item menu. Result: the skill
-    // should STILL be at .claude/skills/ (not moved).
+    // should STILL be at .agents/skills/ (not moved).
     const prompt2 = mockPrompt([
       "user-global",
-      { kind: "move", strategy: "project-claude", target: projectLeaf },
+      { kind: "move", strategy: "project-agents", target: projectLeaf },
     ]);
     await installCommand(
       [join(FIXTURES, "skill", "valid")],
       { prompt: prompt2 },
     );
 
-    // Still at project-claude, nothing at user-global.
+    // Still at project-agents, nothing at user-global.
     assert.ok(
       existsSync(join(projectLeaf, "SKILL.md")),
-      "Skill should remain at .claude/skills/",
+      "Skill should remain at .agents/skills/",
     );
     assert.ok(
-      !existsSync(join(fakeHome, ".claude", "skills", "valid-skill")),
+      !existsSync(join(fakeHome, ".agents", "skills", "valid-skill")),
       "User-global install should NOT exist",
     );
   });
 
   it("per-item 'skip' decision skips the item and records it in the summary", async () => {
-    // First install to project-claude.
+    // First install to project-agents.
     await installCommand(
       [join(FIXTURES, "skill", "valid")],
-      { prompt: mockPrompt(["project-claude"]) },
+      { prompt: mockPrompt(["project-agents"]) },
     );
 
     // Second install: pick USER_GLOBAL, then 'skip' in the per-item menu.
@@ -317,9 +318,9 @@ describe("install-interactive — per-item stay/move prompt", () => {
       { prompt: prompt2 },
     );
 
-    // The skill should still be at its original project-claude location.
+    // The skill should still be at its original project-agents location.
     assert.ok(
-      existsSync(join(projectDir, ".claude", "skills", "valid-skill")),
+      existsSync(join(projectDir, ".agents", "skills", "valid-skill")),
     );
     // And not at user-global.
     assert.ok(

@@ -1,6 +1,6 @@
 # {{titleName}}
 
-A Claude Code rule.
+An Agent Skills rule (Claude Code, Codex CLI).
 
 ## Installation
 
@@ -8,11 +8,13 @@ A Claude Code rule.
 npx @ctxr/kit install @ctxr/{{name}}
 ```
 
-Installs as a single `.md` file into `.claude/rules/`.
+Installs as a single `.md` file into `.agents/rules/<name>.md`.
+
+> Claude Code, Codex CLI, and OpenCode users are auto-served via discovery-mirror symlinks created by `@ctxr/kit` at install time — you do not need to mirror anything by hand.
 
 ## Usage
 
-Claude Code applies this rule automatically based on the scope declared in its frontmatter.
+The host harness applies this rule automatically based on the scope declared in its frontmatter.
 
 ## Releasing
 

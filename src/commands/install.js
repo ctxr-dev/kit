@@ -11,10 +11,13 @@
  * scripted automation continues to work unchanged.
  *
  * Destination strategies (one symbolic value per menu option):
- *   PROJECT_CLAUDE   → <projectPath>/.claude/<type>/        (project-local)
- *   PROJECT_AGENTS   → <projectPath>/.agents/<type>/        (project-local)
- *   USER_GLOBAL      → <homedir>/.claude/<type>/            (user-global)
+ *   PROJECT_AGENTS   → <projectPath>/.agents/<type>/        (canonical, project-scope)
+ *   USER_GLOBAL      → <homedir>/.agents/<type>/             (canonical, user-scope)
  *   CUSTOM           → user-provided absolute or relative path
+ *
+ * After the canonical-paths flip, the installer also emits discovery
+ * mirrors (relative symlinks at `.claude/<type>/<name>` etc) so harnesses
+ * that don't read `.agents/` natively still find the artefact.
  *
  * Each batched source resolves its real target dir at install time by
  * substituting `<type>` per-item. Team members inherit the strategy their
@@ -40,7 +43,7 @@
  */
 
 import { existsSync, readFileSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve, sep } from "node:path";
 import {
   createTmpDir,
   fetchFromGitHub,
@@ -54,6 +57,8 @@ import {
   resolveType,
 } from "../lib/types.js";
 import { findArtifactAcrossTypes } from "../lib/discover.js";
+import { upsertSkillRow } from "../lib/agents-md.js";
+import { migrateLegacyClaudePaths } from "../lib/migrate.js";
 import { installFolder } from "../installers/folder.js";
 import { installFile } from "../installers/file.js";
 import { installTeam } from "../installers/team.js";
@@ -149,7 +154,7 @@ function printUsage() {
   console.error("");
   console.error("Options:");
   console.error("  --dir <path>             Install to specific directory (bypasses prompt)");
-  console.error("  --user                   Install to ~/.claude/<type>/ (user-global)");
+  console.error("  --user                   Install to ~/.agents/<type>/ (user-global)");
   console.error("  -y, --yes                Skip all prompts and use defaults");
   console.error("  -i, --interactive        Force interactive mode (overrides CI detection)");
   console.error("  --help, -h               Show this help");
@@ -428,7 +433,7 @@ async function installSingleDescriptor(
         // be at chosenLeaf, removeExistingArtifact + copyAndRecord is
         // idempotent — the end state is identical.
         removeExistingArtifact(allExisting, descriptor, projectPath);
-        await copyAndRecord(descriptor, targetRoot, report);
+        await copyAndRecord(descriptor, targetRoot, report, projectPath);
         return;
       }
 
@@ -463,19 +468,19 @@ async function installSingleDescriptor(
           descriptor.target,
         );
         removeExistingArtifact(firstMatch, descriptor, projectPath);
-        await copyAndRecord(descriptor, existingTargetRoot, report);
+        await copyAndRecord(descriptor, existingTargetRoot, report, projectPath);
         return;
       }
 
       if (decision.kind === "move") {
         removeExistingArtifact(firstMatch, descriptor, projectPath);
-        await copyAndRecord(descriptor, decision.targetRoot, report);
+        await copyAndRecord(descriptor, decision.targetRoot, report, projectPath);
         return;
       }
       // decision.kind === "install-at-chosen" — fall through
     }
 
-    await copyAndRecord(descriptor, targetRoot, report);
+    await copyAndRecord(descriptor, targetRoot, report, projectPath);
   } catch (err) {
     if (err instanceof interactive.UserAbortError) throw err;
     console.error(`  ✗ ${source} — ${err.message}`);
@@ -528,7 +533,7 @@ async function installDescriptor(
   );
 }
 
-async function copyAndRecord(descriptor, targetRoot, report) {
+async function copyAndRecord(descriptor, targetRoot, report, projectPath) {
   const installerArgs = {
     sourceDir: descriptor.sourceDir,
     targetRoot,
@@ -539,6 +544,8 @@ async function copyAndRecord(descriptor, targetRoot, report) {
     version: descriptor.version,
     integrity: descriptor.integrity,
     commit: descriptor.commit,
+    typeCfg: descriptor.typeCfg,
+    projectPath,
   };
   const result =
     descriptor.target === "folder"
@@ -547,12 +554,59 @@ async function copyAndRecord(descriptor, targetRoot, report) {
   console.log(
     `  ✓ installed ${descriptor.type} ${descriptor.source} → ${result.installedPaths[0]}`,
   );
+  if (result.discoveryMirrors && result.discoveryMirrors.length > 0) {
+    for (const m of result.discoveryMirrors) {
+      console.log(`    ↳ mirrored at ${m}`);
+    }
+  }
+
+  // AGENTS.md emission: only when the canonical destination is under the
+  // project's `.agents/<type>/` (not a custom --dir, not a user-scope
+  // install). Codex CLI and other harnesses scan AGENTS.md at the project
+  // root; user-scope installs have no canonical project root.
+  const projectAgentsRoot = join(projectPath, ".agents");
+  if (
+    targetRoot === projectAgentsRoot ||
+    targetRoot.startsWith(projectAgentsRoot + sep)
+  ) {
+    const rel =
+      descriptor.target === "folder"
+        ? `${typeRel(targetRoot, projectPath)}/${result.installedName}/SKILL.md`
+        : `${typeRel(targetRoot, projectPath)}/${basename(result.installedPaths[0])}`;
+    try {
+      upsertSkillRow({
+        projectPath,
+        installedName: result.installedName,
+        type: descriptor.type,
+        description:
+          (descriptor.pkgJson?.description ?? "").trim() || descriptor.source,
+        skillRelPath: rel,
+      });
+    } catch (err) {
+      process.stderr.write(
+        `warning: failed to update AGENTS.md: ${err.message}\n`,
+      );
+    }
+  }
+
   report.installed.push({
     type: descriptor.type,
     source: descriptor.source,
     installedName: result.installedName,
     installedPaths: result.installedPaths,
+    discoveryMirrors: result.discoveryMirrors ?? [],
   });
+}
+
+function typeRel(targetRoot, projectPath) {
+  const projectAgentsRoot = join(projectPath, ".agents");
+  if (targetRoot.startsWith(projectAgentsRoot + sep)) {
+    // Always emit POSIX-style separators in AGENTS.md so a project
+    // committed under a Windows checkout stays portable when the same
+    // repo is cloned on a POSIX host.
+    return ".agents/" + targetRoot.slice(projectAgentsRoot.length + 1).split(sep).join("/");
+  }
+  return targetRoot;
 }
 
 /**
@@ -601,6 +655,18 @@ export default async function install(args, opts = {}) {
   }
 
   const report = { installed: [], failed: [], skipped: [] };
+
+  // PHASE 0: migrate any legacy `.claude/<type>/` installs from older kit
+  // versions. Idempotent and best-effort — failures log a warning and the
+  // installer proceeds. Skipped when the user supplied --dir (custom
+  // install location implies they don't want kit migrating their layout).
+  if (!flags.dir) {
+    try {
+      migrateLegacyClaudePaths({ projectPath });
+    } catch (err) {
+      process.stderr.write(`warning: legacy migration failed: ${err.message}\n`);
+    }
+  }
 
   // PHASE 1: fetch metadata for every source in parallel-safe serial.
   // Serial is fine for kit's typical batch sizes (1-10) and keeps tmpDir

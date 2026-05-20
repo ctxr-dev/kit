@@ -6,6 +6,7 @@ import {
   ARTIFACT_TYPES,
   ARTIFACT_TYPE_NAMES,
   INSTALLABLE_TYPE_NAMES,
+  LEGACY_PROJECT_DIRS,
   VALID_TARGETS,
   installedName,
   resolveType,
@@ -25,14 +26,43 @@ describe("ARTIFACT_TYPES registry", () => {
     assert.equal(INSTALLABLE_TYPE_NAMES.length, ARTIFACT_TYPE_NAMES.length - 1);
   });
 
-  it("every non-team type has both .claude and .agents candidates", () => {
+  it("every non-team type has a single .agents canonical projectDir", () => {
     for (const name of INSTALLABLE_TYPE_NAMES) {
       const cfg = ARTIFACT_TYPES[name];
-      assert.equal(cfg.projectDirs.length, 2, `${name} should have 2 projectDirs`);
-      assert.ok(cfg.projectDirs[0].startsWith(".claude/"), `${name} primary must be .claude/*`);
-      assert.ok(cfg.projectDirs[1].startsWith(".agents/"), `${name} secondary must be .agents/*`);
+      assert.equal(cfg.projectDirs.length, 1, `${name} should have 1 canonical projectDir`);
+      assert.ok(cfg.projectDirs[0].startsWith(".agents/"), `${name} canonical must be .agents/*`);
       assert.equal(typeof cfg.userDir, "string");
       assert.ok(cfg.userDir.length > 0);
+    }
+  });
+
+  it("every non-team type declares discovery mirrors for legacy + per-client dirs", () => {
+    for (const name of INSTALLABLE_TYPE_NAMES) {
+      const cfg = ARTIFACT_TYPES[name];
+      assert.ok(cfg.discoveryMirrors, `${name} must declare discoveryMirrors`);
+      assert.ok(Array.isArray(cfg.discoveryMirrors.project));
+      assert.ok(Array.isArray(cfg.discoveryMirrors.user));
+      // Project mirrors include the legacy .claude/<type> path.
+      assert.ok(
+        cfg.discoveryMirrors.project.some((p) => p.startsWith(".claude/")),
+        `${name} project mirrors must include .claude/*`,
+      );
+      // User mirrors include both .claude and .codex per-client dirs.
+      assert.ok(
+        cfg.discoveryMirrors.user.some((p) => p.startsWith(".claude/")),
+        `${name} user mirrors must include .claude/*`,
+      );
+      assert.ok(
+        cfg.discoveryMirrors.user.some((p) => p.startsWith(".codex/")),
+        `${name} user mirrors must include .codex/*`,
+      );
+    }
+  });
+
+  it("LEGACY_PROJECT_DIRS lists a .claude/<type> entry for every type", () => {
+    for (const name of ARTIFACT_TYPE_NAMES) {
+      assert.ok(LEGACY_PROJECT_DIRS[name], `${name} must have a legacy dir`);
+      assert.ok(LEGACY_PROJECT_DIRS[name].startsWith(".claude/"));
     }
   });
 
@@ -314,7 +344,7 @@ describe("resolveTargetRoot", () => {
       user: true,
       typeCfg: skillCfg,
     });
-    assert.equal(result, join(homedir(), ".claude", "skills"));
+    assert.equal(result, join(homedir(), ".agents", "skills"));
   });
 
   it("--user errors for types without a userDir (team)", () => {
@@ -324,15 +354,15 @@ describe("resolveTargetRoot", () => {
     );
   });
 
-  it("falls back to first projectDirs entry when nothing exists", () => {
+  it("falls back to canonical .agents/<type> when nothing exists", () => {
     const result = resolveTargetRoot(projectPath, {
       typeCfg: skillCfg,
       existsCheck: () => false,
     });
-    assert.equal(result, join(projectPath, ".claude/skills"));
+    assert.equal(result, join(projectPath, ".agents/skills"));
   });
 
-  it("picks first existing candidate when one exists", () => {
+  it("picks canonical .agents/<type> when it exists", () => {
     const existingPath = join(projectPath, ".agents/skills");
     const result = resolveTargetRoot(projectPath, {
       typeCfg: skillCfg,
@@ -341,12 +371,14 @@ describe("resolveTargetRoot", () => {
     assert.equal(result, existingPath);
   });
 
-  it("prefers .claude over .agents when both exist (ordering respected)", () => {
+  it("always uses .agents/<type> as canonical (no .claude/ fallback)", () => {
+    // After the canonical-paths flip, .claude/ is a discovery mirror only.
+    // resolveTargetRoot returns the canonical .agents/<type> regardless.
     const result = resolveTargetRoot(projectPath, {
       typeCfg: skillCfg,
-      existsCheck: () => true, // everything exists
+      existsCheck: () => true,
     });
-    assert.equal(result, join(projectPath, ".claude/skills"));
+    assert.equal(result, join(projectPath, ".agents/skills"));
   });
 
   it("errors on missing projectPath", () => {
@@ -394,7 +426,7 @@ describe("resolveTargetRoot", () => {
     // path under a non-existent projectPath (falls back to primary default).
     const nonExistent = "/tmp/ctxr-test-does-not-exist-" + Math.random().toString(36).slice(2);
     const result = resolveTargetRoot(nonExistent, { typeCfg: skillCfg });
-    // Nothing under nonExistent exists, so the first projectDirs entry wins.
-    assert.equal(result, join(nonExistent, ".claude/skills"));
+    // Nothing under nonExistent exists, so the canonical .agents/skills wins.
+    assert.equal(result, join(nonExistent, ".agents/skills"));
   });
 });

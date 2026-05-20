@@ -1,6 +1,6 @@
 # {{titleName}}
 
-A Claude Code output style.
+An Agent Skills output style (Claude Code, Codex CLI).
 
 ## Installation
 
@@ -8,11 +8,13 @@ A Claude Code output style.
 npx @ctxr/kit install @ctxr/{{name}}
 ```
 
-Installs as a single `.md` file into `.claude/output-styles/`.
+Installs as a single `.md` file into `.agents/output-styles/<name>.md`.
+
+> Claude Code, Codex CLI, and OpenCode users are auto-served via discovery-mirror symlinks created by `@ctxr/kit` at install time — you do not need to mirror anything by hand.
 
 ## Usage
 
-Activate with `/output-style {{name}}` inside Claude Code.
+Activate with `/output-style {{name}}` inside your harness.
 
 ## Releasing
 

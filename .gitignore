@@ -2,8 +2,11 @@ node_modules/
 .DS_Store
 *.tgz
 
-# Dogfooding artifacts — kit installs into its own project's .claude/
-# directory when exercised manually from within ctxr/ (e.g. during
-# end-to-end verification). Tests use isolated tmpdirs, so any .claude/
-# tree in the working copy is developer noise, not shipped or tracked.
+# Dogfooding artifacts: kit installs into its own project's .claude/
+# and .agents/ directories when exercised manually from within ctxr/
+# (e.g. during end-to-end verification). Tests use isolated tmpdirs,
+# so any .claude/, .agents/, or AGENTS.md in the working copy is
+# developer noise, not shipped or tracked.
 .claude/
+.agents/
+AGENTS.md

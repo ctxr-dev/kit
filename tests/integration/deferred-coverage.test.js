@@ -241,7 +241,7 @@ describe("C3 — -i / --interactive forces interactive mode even under CI=true",
     // If --interactive weren't forwarded, the delegated install would
     // auto-detect silently (prompt.calls would have 0 select entries).
     const src = join(FIXTURES, "skill", "valid");
-    const prompt = mockPrompt(["project-claude"]);
+    const prompt = mockPrompt(["project-agents"]);
     await updateCommand(
       [src, projectDir, "--install", "--interactive"],
       { prompt },
@@ -251,10 +251,10 @@ describe("C3 — -i / --interactive forces interactive mode even under CI=true",
       selectCalls.length >= 1,
       "Expected the delegated install to fire its shared menu under --interactive + CI=true",
     );
-    // Sanity: install succeeded.
+    // Sanity: install succeeded at the canonical location.
     assert.ok(
       existsSync(
-        join(projectDir, ".claude", "skills", "valid-skill", "SKILL.md"),
+        join(projectDir, ".agents", "skills", "valid-skill", "SKILL.md"),
       ),
     );
   });
