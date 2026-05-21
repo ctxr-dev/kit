@@ -21,6 +21,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI = join(__dirname, "..", "..", "src", "cli.js");
 const FIXTURES = join(__dirname, "..", "fixtures");
 
+// `existsSync` returns false for a broken symlink, so to prove a mirror
+// symlink is truly gone (and not merely dangling) we also lstat it.
+function lstatSym(p) {
+  try {
+    return lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 function seedLegacySkill(projectDir, name, version = "1.0.0") {
   const dir = join(projectDir, ".claude", "skills", name);
   mkdirSync(dir, { recursive: true });
@@ -95,6 +105,92 @@ describe("migrateLegacyClaudePaths (unit)", () => {
         readFileSync(legacyManifestPath, "utf8"),
       );
       assert.ok(!legacyManifest["legacy-foo"]);
+    }
+  });
+
+  it("repoints the canonical row's installedPaths at .agents and folds the legacy leaf into discoveryMirrors", function (t) {
+    if (process.platform === "win32") {
+      return t.skip("symlinks require POSIX or Windows dev mode");
+    }
+    // Regression for BUG FIX A: migrateOneRow must set
+    // installedPaths: [canonicalDir] (NOT the old .claude leaf) and fold the
+    // legacy leaf into discoveryMirrors. The pre-fix code spread legacyEntry
+    // verbatim, leaving installedPaths pointing at the legacy .claude path —
+    // so a later `kit remove` deleted the wrong path and orphaned the mirror.
+    seedLegacySkill(projectDir, "legacy-foo");
+    migrateLegacyClaudePaths({ projectPath: projectDir });
+
+    const canonical = join(projectDir, ".agents", "skills", "legacy-foo");
+    const legacy = join(projectDir, ".claude", "skills", "legacy-foo");
+    const canonicalManifest = JSON.parse(
+      readFileSync(
+        join(projectDir, ".agents", "skills", ".ctxr-manifest.json"),
+        "utf8",
+      ),
+    );
+    const entry = canonicalManifest["legacy-foo"];
+    assert.ok(entry);
+    // installedPaths now points at the canonical .agents path, NOT .claude.
+    assert.deepEqual(entry.installedPaths, [canonical]);
+    assert.ok(
+      !entry.installedPaths.some((p) => p.includes(`${join(".claude", "skills")}`)),
+      `installedPaths must not reference the legacy .claude path: ${JSON.stringify(entry.installedPaths)}`,
+    );
+    // The legacy leaf is now recorded as a discovery mirror so remove cleans it.
+    assert.ok(Array.isArray(entry.discoveryMirrors));
+    assert.ok(
+      entry.discoveryMirrors.includes(legacy),
+      `discoveryMirrors must include the legacy leaf ${legacy}: ${JSON.stringify(entry.discoveryMirrors)}`,
+    );
+  });
+
+  it("full round-trip: migrate a legacy install, then kit remove leaves no canonical dir, mirror, or orphan", function (t) {
+    if (process.platform === "win32") {
+      return t.skip("symlinks require POSIX or Windows dev mode");
+    }
+    // Regression for BUG FIX A end-to-end: this is the exact scenario the bug
+    // would have broken. Pre-fix, the migrated row's installedPaths pointed at
+    // .claude, so `kit remove` deleted the legacy symlink (via installedPaths)
+    // and left the real canonical .agents dir behind as an orphan.
+    const fakeHome = mkdtempSync(join(tmpdir(), "ctxr-rt-home-"));
+    try {
+      seedLegacySkill(projectDir, "valid-skill");
+      migrateLegacyClaudePaths({ projectPath: projectDir });
+
+      const canonical = join(projectDir, ".agents", "skills", "valid-skill");
+      const legacyMirror = join(projectDir, ".claude", "skills", "valid-skill");
+      assert.ok(existsSync(canonical));
+      assert.equal(lstatSync(legacyMirror).isSymbolicLink(), true);
+
+      const r = spawnSync(
+        "node",
+        [CLI, "remove", "valid-skill", projectDir, "--force"],
+        {
+          encoding: "utf8",
+          env: { ...process.env, HOME: fakeHome, CI: "true" },
+          cwd: projectDir,
+        },
+      );
+      assert.equal(r.status, 0, r.stderr);
+
+      // Canonical dir gone.
+      assert.equal(existsSync(canonical), false, "canonical .agents dir must be removed");
+      // Legacy mirror symlink gone (no broken-symlink orphan left behind).
+      assert.equal(
+        existsSync(legacyMirror) || lstatSym(legacyMirror),
+        false,
+        "legacy .claude mirror symlink must be removed",
+      );
+      // Manifest row gone.
+      const canonicalManifest = JSON.parse(
+        readFileSync(
+          join(projectDir, ".agents", "skills", ".ctxr-manifest.json"),
+          "utf8",
+        ),
+      );
+      assert.ok(!canonicalManifest["valid-skill"]);
+    } finally {
+      rmSync(fakeHome, { recursive: true, force: true });
     }
   });
 

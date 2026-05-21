@@ -26,7 +26,6 @@
  * explicitDir, explicitByFlag}` result back.
  */
 
-import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
 
