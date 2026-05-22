@@ -1,6 +1,6 @@
 # {{titleName}}
 
-A Claude Code team bundle — installs several artifacts in one command.
+An Agent Skills team bundle (Claude Code, Codex CLI) — installs several artifacts in one command.
 
 ## Installation
 

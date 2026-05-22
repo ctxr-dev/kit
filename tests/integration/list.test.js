@@ -177,11 +177,11 @@ describe("list command", () => {
       const r = cli("list", [projectDir], env);
       assert.equal(r.exitCode, 0);
       assert.ok(
-        r.stdout.includes("~/.claude/skills"),
+        r.stdout.includes("~/.agents/skills"),
         `Expected ~-prefixed user path, got: ${r.stdout}`,
       );
       assert.ok(
-        existsSync(join(fakeHome, ".claude", "skills", "valid-skill", "SKILL.md")),
+        existsSync(join(fakeHome, ".agents", "skills", "valid-skill", "SKILL.md")),
       );
     });
   });

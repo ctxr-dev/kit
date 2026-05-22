@@ -2,13 +2,19 @@
 
 [![npm](https://img.shields.io/npm/v/@ctxr/kit)](https://www.npmjs.com/package/@ctxr/kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-Claude%20Code%20%7C%20Codex%20CLI-blue)](https://agentskills.io)
 
-Universal CLI for Claude Code artifacts — install, validate, update, and
-scaffold **skills, agents, commands, rules, output-styles, and teams** with
-one command. The `package.json` `files` field is the single source of truth
-for what each package ships, and the manifest filename `.ctxr-manifest.json`
-is written per install root. Run the CLI via `npx @ctxr/kit` — no global
-install required.
+Universal CLI for [Agent Skills](https://agentskills.io) artifacts: install,
+validate, update, and scaffold **skills, agents, commands, rules,
+output-styles, and teams** for Claude Code, OpenAI Codex CLI, and any other
+harness that follows the open Agent Skills standard. The canonical install
+location is `.agents/<type>/<name>/` (project) and `~/.agents/<type>/<name>/`
+(user); kit auto-creates discovery-mirror symlinks at `.claude/<type>/<name>`
+and `~/.codex/<type>/<name>` so harnesses that don't read `.agents/` natively
+still find the artefact. The `package.json` `files` field is the single
+source of truth for what each package ships, and the manifest filename
+`.ctxr-manifest.json` is written per install root. Run the CLI via
+`npx @ctxr/kit`; no global install required.
 
 ## Quick start
 
@@ -23,8 +29,11 @@ That's the whole loop. Run `npx @ctxr/kit --help` for the full command set.
 
 - **Node.js ≥ 18.0.0** (uses ESM, `node:test`, and the modern `node:fs` API)
 - A project directory where you want artifacts installed. Project-scope
-  installs land under `.claude/<type>/` by default; user-scope installs
-  (`--user`) land under `~/.claude/<type>/`.
+  installs land canonically under `.agents/<type>/`; user-scope installs
+  (`--user`) land canonically under `~/.agents/<type>/`. Discovery-mirror
+  symlinks at `.claude/<type>/` (and `~/.codex/<type>/` at user scope)
+  are created automatically so Claude Code and Codex CLI both find every
+  installed artefact without extra configuration.
 
 ## Install
 
@@ -43,9 +52,9 @@ never asks you to install it globally.
 `kit` is **interactive by default**. In a terminal, every command that has
 a choice to make prompts you with an arrow-key menu or a short question:
 
-- `install` shows a destination menu with every candidate location
-  (`.claude/<type>/`, `.agents/<type>/`, `~/.claude/<type>/`, or a custom
-  path you type) and pre-highlights the one kit would auto-pick.
+- `install` shows a destination menu with the canonical candidate
+  locations (`.agents/<type>/`, `~/.agents/<type>/`, or a custom path
+  you type) and pre-highlights the one kit would auto-pick.
 - For any artifact you're installing that's already installed at a
   *different* location than you just picked, `install` asks per-item
   whether to **keep** it there (update in place) or **move** it to the
@@ -91,20 +100,23 @@ auto-detection triggers.
 
 ## Artifact types
 
-`kit` understands every artifact type Claude Code can discover, plus a `team`
-meta-type that bundles several of them into a single installable package.
+`kit` understands every artifact type the Agent Skills standard recognises,
+plus a `team` meta-type that bundles several of them into a single
+installable package.
 
-| Type           | Lands in                          | `ctxr.target`     | Typical payload          |
-|----------------|-----------------------------------|-------------------|--------------------------|
-| `skill`        | `.claude/skills/<name>/`          | `folder`          | `SKILL.md` + assets      |
-| `agent`        | `.claude/agents/<name>.md`        | `file` or `folder`| Single `.md` (or bundle) |
-| `command`      | `.claude/commands/<name>.md`      | `file`            | Single `.md`             |
-| `rule`         | `.claude/rules/<name>.md`         | `file`            | Single `.md`             |
-| `output-style` | `.claude/output-styles/<name>.md` | `file`            | Single `.md`             |
-| `team`         | (cascades to `ctxr.includes`)     | n/a               | No payload               |
+| Type           | Canonical install path           | `ctxr.target`     | Typical payload          |
+|----------------|----------------------------------|-------------------|--------------------------|
+| `skill`        | `.agents/skills/<name>/`         | `folder`          | `SKILL.md` + assets      |
+| `agent`        | `.agents/agents/<name>.md`       | `file` or `folder`| Single `.md` (or bundle) |
+| `command`      | `.agents/commands/<name>.md`     | `file`            | Single `.md`             |
+| `rule`         | `.agents/rules/<name>.md`        | `file`            | Single `.md`             |
+| `output-style` | `.agents/output-styles/<name>.md`| `file`            | Single `.md`             |
+| `team`         | (cascades to `ctxr.includes`)    | n/a               | No payload               |
 
-`.agents/<typeDir>/` and `~/.claude/<typeDir>/` are also discovered when
-they exist — see [Install locations](#install-locations) below.
+Each canonical install also gets a discovery-mirror symlink at
+`.claude/<type>/<name>` (project) and `~/.codex/<type>/<name>` (user
+scope) so Claude Code and Codex CLI both auto-discover the artefact;
+see [Install locations](#install-locations) below.
 
 ## Per-package schema
 
@@ -194,18 +206,41 @@ abort.
 
 #### Install locations
 
-| Location                          | When it's used                                          |
-|-----------------------------------|---------------------------------------------------------|
-| `.claude/<type>/`                 | Project-level, Claude Code's native discovery directory |
-| `.agents/<type>/`                 | Project-level, open-standard parallel                   |
-| `~/.claude/<type>/`               | User-global (with `--user`)                             |
-| Custom path                       | Via `--dir <path>`                                      |
+| Location                  | Role                                                  |
+|---------------------------|-------------------------------------------------------|
+| `.agents/<type>/`         | Project-scope canonical (real files live here)        |
+| `.claude/<type>/`         | Project-scope discovery mirror (symlink, auto)        |
+| `~/.agents/<type>/`       | User-global canonical (real files live here)          |
+| `~/.claude/<type>/`       | User-global discovery mirror for Claude Code (symlink)|
+| `~/.codex/<type>/`        | User-global discovery mirror for Codex CLI (symlink)  |
+| Custom path               | Via `--dir <path>` (mirrors are skipped)              |
 
-Auto-detect: `kit` walks the project-level candidates in order
-(`.claude/<type>/` first, then `.agents/<type>/`) and installs into the
-first one that already exists. If neither exists, it creates
-`.claude/<type>/` — Claude Code's native discovery directory — and uses
-that.
+For project-scope installs `kit` also upserts a row in `AGENTS.md` at
+the project root, with stable `<!-- ctxr:skills:start -->` /
+`<!-- ctxr:skills:end -->` markers. Anything you author outside the
+markers is preserved verbatim across re-installs and removes.
+
+To disable kit's `AGENTS.md` emitter entirely (no creates, no upserts,
+no removes) set `CTXR_NO_AGENTS_MD=1` in the environment. Useful when
+`AGENTS.md` is hand-authored, kept in `.gitignore`, or otherwise managed
+outside kit.
+
+#### Migration of legacy `.claude/<type>/<name>/` installs
+
+When `kit install` runs and detects a real (non-symlink) directory at
+the legacy `.claude/<type>/<name>/` path with a recorded manifest row,
+it moves the directory to `.agents/<type>/<name>/`, replaces the
+original with a symlink, and migrates the manifest row. The same
+applies to user-scope installs at `~/.claude/<type>/`. Migration is
+idempotent and skipped when `--dir` is set (a deliberate custom layout
+is left alone). `kit update` does NOT auto-migrate; it preserves
+whatever layout you originally chose so a routine update never
+surprises you with a relocation.
+
+Auto-detect: `kit` always installs canonically to `.agents/<type>/`
+and creates the discovery mirrors automatically. If a legacy real
+`.claude/<type>/<name>/` install is found, the migration step above
+moves it to the canonical path before installing.
 
 ### `npx @ctxr/kit update [name]`
 

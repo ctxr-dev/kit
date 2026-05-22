@@ -4,11 +4,14 @@
  * Every installable package declares its type and on-disk layout via a
  * nested `ctxr: { type, target, includes }` object in its package.json.
  * Kit reads that object, looks up the type in this registry, and dispatches
- * to the appropriate installer. The registry itself only maps types to
- * their Claude-Code-native directories — layout is driven by ctxr.target
- * per the package's own declaration.
+ * to the appropriate installer. The registry maps each type to its canonical
+ * Agent Skills directory under `.agents/<type>/` (project) and `~/.agents/<type>/`
+ * (user). Layout is driven by ctxr.target per the package's own declaration.
  *
- * See /Users/developer/.claude/plans/shiny-watching-moth.md §3.
+ * `discoveryMirrors` lists the legacy / per-client paths where kit creates
+ * symlinks at install time so harnesses that don't read `.agents/` natively
+ * (Claude Code: `.claude/<type>/`; Codex CLI user-scope: `~/.codex/<type>/`)
+ * still discover installed artefacts.
  */
 
 import { existsSync } from "node:fs";
@@ -17,29 +20,68 @@ import { join } from "node:path";
 
 export const ARTIFACT_TYPES = Object.freeze({
   skill: Object.freeze({
-    projectDirs: Object.freeze([".claude/skills", ".agents/skills"]),
+    projectDirs: Object.freeze([".agents/skills"]),
     userDir: "skills",
+    discoveryMirrors: Object.freeze({
+      project: Object.freeze([".claude/skills"]),
+      user: Object.freeze([".claude/skills", ".codex/skills"]),
+    }),
   }),
   agent: Object.freeze({
-    projectDirs: Object.freeze([".claude/agents", ".agents/agents"]),
+    projectDirs: Object.freeze([".agents/agents"]),
     userDir: "agents",
+    discoveryMirrors: Object.freeze({
+      project: Object.freeze([".claude/agents"]),
+      user: Object.freeze([".claude/agents", ".codex/agents"]),
+    }),
   }),
   command: Object.freeze({
-    projectDirs: Object.freeze([".claude/commands", ".agents/commands"]),
+    projectDirs: Object.freeze([".agents/commands"]),
     userDir: "commands",
+    discoveryMirrors: Object.freeze({
+      project: Object.freeze([".claude/commands"]),
+      user: Object.freeze([".claude/commands", ".codex/commands"]),
+    }),
   }),
   "output-style": Object.freeze({
-    projectDirs: Object.freeze([".claude/output-styles", ".agents/output-styles"]),
+    projectDirs: Object.freeze([".agents/output-styles"]),
     userDir: "output-styles",
+    discoveryMirrors: Object.freeze({
+      project: Object.freeze([".claude/output-styles"]),
+      user: Object.freeze([".claude/output-styles", ".codex/output-styles"]),
+    }),
   }),
   rule: Object.freeze({
-    projectDirs: Object.freeze([".claude/rules", ".agents/rules"]),
+    projectDirs: Object.freeze([".agents/rules"]),
     userDir: "rules",
+    discoveryMirrors: Object.freeze({
+      project: Object.freeze([".claude/rules"]),
+      user: Object.freeze([".claude/rules", ".codex/rules"]),
+    }),
   }),
   team: Object.freeze({
     projectDirs: Object.freeze([]),
     userDir: null,
+    discoveryMirrors: Object.freeze({
+      project: Object.freeze([]),
+      user: Object.freeze([]),
+    }),
   }),
+});
+
+/**
+ * Legacy project-scope dirs kit recognises for migration. When a real (non-symlink)
+ * directory exists at `<projectPath>/.claude/<type>/<name>/`, the migration helper
+ * moves it to `.agents/<type>/<name>/` and replaces the legacy path with a symlink.
+ * Listed here so discovery, removal, and migration share one source of truth.
+ */
+export const LEGACY_PROJECT_DIRS = Object.freeze({
+  skill: ".claude/skills",
+  agent: ".claude/agents",
+  command: ".claude/commands",
+  "output-style": ".claude/output-styles",
+  rule: ".claude/rules",
+  team: ".claude/teams",
 });
 
 export const ARTIFACT_TYPE_NAMES = Object.freeze(Object.keys(ARTIFACT_TYPES));
@@ -146,7 +188,7 @@ export function resolveType(pkgJson) {
  *
  * Precedence:
  *   1. Explicit `dir` (absolute or relative to projectPath)
- *   2. `user: true` → ~/.claude/<typeCfg.userDir>
+ *   2. `user: true` → ~/.agents/<typeCfg.userDir>
  *   3. First existing entry in `typeCfg.projectDirs` (if any exist on disk)
  *   4. Primary default: first entry in `typeCfg.projectDirs` (will be created)
  *
@@ -155,7 +197,7 @@ export function resolveType(pkgJson) {
  * @param {string} projectPath — absolute project root
  * @param {object} opts
  * @param {string} [opts.dir] — explicit target path (takes precedence over --user)
- * @param {boolean} [opts.user] — install to ~/.claude/<typeCfg.userDir>
+ * @param {boolean} [opts.user] — install to ~/.agents/<typeCfg.userDir>
  * @param {object} opts.typeCfg — entry from ARTIFACT_TYPES
  * @param {(p: string) => boolean} [opts.existsCheck] — override for filesystem probe (defaults to node:fs existsSync; tests may inject a fake)
  * @returns {string} absolute directory path
@@ -187,7 +229,7 @@ export function resolveTargetRoot(projectPath, opts) {
         `This type has no user-scope directory (team/meta types cannot be installed to --user).`,
       );
     }
-    return join(homedir(), ".claude", typeCfg.userDir);
+    return join(homedir(), ".agents", typeCfg.userDir);
   }
 
   // Non-team types only from here on

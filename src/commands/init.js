@@ -368,7 +368,7 @@ async function askTarget(flags, prompt, type) {
   return prompt.select({
     message: "Layout",
     options: [
-      { value: "file", label: "file (single .md in .claude/<type>/)" },
+      { value: "file", label: "file (single .md in .agents/<type>/)" },
       { value: "folder", label: "folder (wrapper dir with multi-file payload)" },
     ],
     defaultValue: defaultTarget,

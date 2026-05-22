@@ -42,6 +42,7 @@ import {
   listAllInstalled,
   removeEntryFromManifest,
 } from "../lib/discover.js";
+import { removeSkillRow } from "../lib/agents-md.js";
 import * as interactive from "../lib/interactive.js";
 import { isFlagLike, unknownFlagError, usageError } from "../lib/cli-errors.js";
 
@@ -63,6 +64,14 @@ function removeMatchCascade(match, { keepMembers, projectPath }) {
       const memberMatches = findArtifactAcrossTypes(memberName, projectPath);
       for (const m of memberMatches) {
         removeEntryFromManifest(m);
+        try {
+          removeSkillRow({
+            projectPath,
+            installedName: m.entry.installedName,
+          });
+        } catch {
+          /* best-effort */
+        }
         lines.push(
           `    ↳ removed member '${m.entry.installedName}' from ${formatPath(m.dir)}`,
         );
@@ -71,6 +80,17 @@ function removeMatchCascade(match, { keepMembers, projectPath }) {
   }
 
   removeEntryFromManifest(match);
+  // Remove the AGENTS.md row for project-scope artefacts. User-scope and
+  // team-meta entries don't have an AGENTS.md row, but `removeSkillRow` is
+  // a no-op when the row isn't found, so a single unconditional call is
+  // safe and keeps the logic local.
+  if (typeName !== "team") {
+    try {
+      removeSkillRow({ projectPath, installedName: entry.installedName });
+    } catch {
+      /* best-effort */
+    }
+  }
   lines.push(
     `  ✓ removed '${entry.installedName}' (${typeName}) from ${formatPath(match.dir)}`,
   );

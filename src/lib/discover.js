@@ -2,11 +2,15 @@
  * Type-aware artifact discovery and manifest I/O.
  *
  * Every install location holds one `.ctxr-manifest.json` per artifact-type
- * directory (e.g. `.claude/skills/.ctxr-manifest.json`,
- * `.claude/agents/.ctxr-manifest.json`, `~/.claude/teams/.ctxr-manifest.json`).
- * Manifest writes are atomic (temp + fsync + rename) so a SIGINT or
- * concurrent `kit install` can never leave a half-written JSON that
- * silently loses every previously-recorded artifact.
+ * directory (e.g. `.agents/skills/.ctxr-manifest.json`,
+ * `.agents/agents/.ctxr-manifest.json`, `~/.agents/teams/.ctxr-manifest.json`).
+ * Discovery also walks legacy `.claude/<type>/` and `~/.claude/<type>/` paths
+ * plus per-client mirrors (`~/.codex/<type>/`) so `list`, `remove`, and the
+ * migration helper can find pre-flip and pre-migration installs.
+ *
+ * Manifest writes are atomic (temp + fsync + rename) so a SIGINT or concurrent
+ * `kit install` can never leave a half-written JSON that silently loses every
+ * previously-recorded artifact.
  *
  * Reads tolerate a malformed manifest by warning to stderr and returning an
  * empty object — silent `{}` would orphan every entry without notifying the
@@ -26,7 +30,8 @@ import {
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { ARTIFACT_TYPES, INSTALLABLE_TYPE_NAMES } from "./types.js";
+import { ARTIFACT_TYPES, INSTALLABLE_TYPE_NAMES, LEGACY_PROJECT_DIRS } from "./types.js";
+import { removeMirror } from "./symlink.js";
 
 export const MANIFEST_FILE = ".ctxr-manifest.json";
 
@@ -37,11 +42,24 @@ export const MANIFEST_FILE = ".ctxr-manifest.json";
  * one-line warning to stderr so the user knows their manifest needs repair —
  * silently swallowing the parse error would orphan every recorded artifact.
  */
+// Pollution keys filtered out of every manifest read. JSON.parse will set
+// `__proto__` as an own property (not the prototype chain), but downstream
+// spreads (`{ ...legacyEntry }` in migrate.js) copy own enumerables only,
+// and any key called `constructor` or `prototype` survives unfiltered. Strip
+// the trio at parse time as defence-in-depth so a malicious manifest can
+// never seed pollution keys into kit's data flow.
+const MANIFEST_POLLUTION_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+function manifestReviver(key, value) {
+  if (MANIFEST_POLLUTION_KEYS.has(key)) return undefined;
+  return value;
+}
+
 export function readManifest(dir) {
   const manifestPath = join(dir, MANIFEST_FILE);
   if (!existsSync(manifestPath)) return {};
   try {
-    return JSON.parse(readFileSync(manifestPath, "utf8"));
+    return JSON.parse(readFileSync(manifestPath, "utf8"), manifestReviver);
   } catch (err) {
     process.stderr.write(
       `warning: manifest at ${manifestPath} is malformed, ignoring (${err.message})\n`,
@@ -80,7 +98,10 @@ export function writeManifest(dir, manifest) {
   const manifestPath = join(dir, MANIFEST_FILE);
   const tmpPath = `${manifestPath}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
   try {
-    writeFileSync(tmpPath, JSON.stringify(manifest, null, 2) + "\n");
+    // `flag: "wx"` (O_EXCL) refuses to follow a pre-planted symlink at the
+    // tmp path. Combined with the per-pid + random suffix this makes
+    // targeted symlink attacks on the tmp slot effectively impossible.
+    writeFileSync(tmpPath, JSON.stringify(manifest, null, 2) + "\n", { flag: "wx" });
     const fd = openSync(tmpPath, "r+");
     try {
       fsyncSync(fd);
@@ -100,8 +121,14 @@ export function writeManifest(dir, manifest) {
 
 /**
  * List candidate install directories for a given artifact type that actually
- * exist on disk. Iterates `typeCfg.projectDirs` under `projectPath` plus the
- * `~/.claude/<userDir>/` user-scope entry.
+ * exist on disk. Iterates the canonical `.agents/<type>/` project dir plus
+ * `~/.agents/<type>/` user-scope dir, plus every legacy/mirror path declared
+ * in `typeCfg.discoveryMirrors` and `LEGACY_PROJECT_DIRS` so a fresh `list` /
+ * `remove` finds installs that pre-date the canonical-path flip.
+ *
+ * Mirror paths only matter to discovery while a legacy install or symlink
+ * still exists at one of them; idempotent re-installs/removes are safe even
+ * when the mirror points at the canonical dir.
  *
  * @param {string} typeName — key into ARTIFACT_TYPES
  * @param {string} projectPath — absolute project root
@@ -116,10 +143,29 @@ export function discoverArtifactDirs(typeName, projectPath) {
   for (const rel of typeCfg.projectDirs) {
     candidates.push(join(projectPath, rel));
   }
-  if (typeCfg.userDir) {
-    candidates.push(join(homedir(), ".claude", typeCfg.userDir));
+  // Legacy project-scope dir (pre-flip installs).
+  const legacyProjectRel = LEGACY_PROJECT_DIRS[typeName];
+  if (legacyProjectRel) {
+    candidates.push(join(projectPath, legacyProjectRel));
   }
-  return candidates.filter((p) => existsSync(p));
+  // Project-scope discovery mirrors (today: same as legacy).
+  for (const rel of typeCfg.discoveryMirrors?.project ?? []) {
+    candidates.push(join(projectPath, rel));
+  }
+  if (typeCfg.userDir) {
+    candidates.push(join(homedir(), ".agents", typeCfg.userDir));
+    // Legacy + per-client user-scope mirrors.
+    for (const rel of typeCfg.discoveryMirrors?.user ?? []) {
+      candidates.push(join(homedir(), rel));
+    }
+  }
+  // De-dup while preserving order (canonical first, mirrors after).
+  const seen = new Set();
+  return candidates.filter((p) => {
+    if (seen.has(p)) return false;
+    seen.add(p);
+    return existsSync(p);
+  });
 }
 
 /**
@@ -149,6 +195,10 @@ export function getInstalledArtifacts(dir) {
       installedPaths: Array.isArray(raw.installedPaths)
         ? raw.installedPaths
         : [join(dir, key)],
+      discoveryMirrors: Array.isArray(raw.discoveryMirrors)
+        ? raw.discoveryMirrors
+        : [],
+      migratedFrom: typeof raw.migratedFrom === "string" ? raw.migratedFrom : null,
       installedAt: raw.installedAt ?? null,
       updatedAt: raw.updatedAt ?? null,
     };
@@ -161,20 +211,29 @@ export function getInstalledArtifacts(dir) {
 }
 
 /**
- * Team manifests live at `.claude/teams/` (project) and `~/.claude/teams/`
+ * Team manifests live at `.agents/teams/` (project) and `~/.agents/teams/`
  * (user). Team is a meta type and does not appear in `ARTIFACT_TYPES` with
  * project/user dirs, so the list/remove/update commands call this helper
- * directly to enumerate team manifest locations.
+ * directly to enumerate team manifest locations. The legacy `.claude/teams/`
+ * paths are appended so pre-flip team manifests are still found until the
+ * migration helper moves them.
  *
  * @param {string} projectPath — absolute project root
  * @returns {string[]} absolute directory paths that exist
  */
 export function discoverTeamManifestDirs(projectPath) {
   const candidates = [
+    join(projectPath, ".agents", "teams"),
+    join(homedir(), ".agents", "teams"),
     join(projectPath, ".claude", "teams"),
     join(homedir(), ".claude", "teams"),
   ];
-  return candidates.filter((p) => existsSync(p));
+  const seen = new Set();
+  return candidates.filter((p) => {
+    if (seen.has(p)) return false;
+    seen.add(p);
+    return existsSync(p);
+  });
 }
 
 /**
@@ -204,18 +263,40 @@ export function listAllInstalled(projectPath) {
 }
 
 /**
- * Delete an entry's on-disk install paths and remove its manifest row.
- * Used by `remove` (leaf delete) and `update` (remove-then-reinstall). No
- * team cascade, no confirmation — callers layer their own policy on top.
+ * Delete an entry's on-disk install paths, every kit-owned discovery mirror
+ * recorded on the entry, and the manifest row. Used by `remove` (leaf
+ * delete) and `update` (remove-then-reinstall). No team cascade, no
+ * confirmation — callers layer their own policy on top.
  *
  * Synthetic team `installedPaths` (which don't exist on disk) are safe
  * because `rmSync({ force: true })` ignores missing targets.
  *
- * @param {{ dir: string, entry: { installedName: string, installedPaths?: string[] } }} match
+ * Discovery mirrors are deleted via `removeMirror` from `./symlink.js`,
+ * which refuses to delete anything kit does not own (real directories,
+ * symlinks pointing somewhere unexpected). Errors and warnings are logged
+ * to stderr but never propagate, mirroring the best-effort cleanup
+ * semantics of the surrounding code.
+ *
+ * @param {{ dir: string, entry: { installedName: string, installedPaths?: string[], discoveryMirrors?: string[] } }} match
  */
 export function removeEntryFromManifest({ dir, entry }) {
   for (const p of entry.installedPaths || []) {
     rmSync(p, { recursive: true, force: true });
+  }
+  if (Array.isArray(entry.discoveryMirrors) && entry.discoveryMirrors.length > 0) {
+    const expectedTarget = entry.installedPaths?.[0];
+    for (const mirrorPath of entry.discoveryMirrors) {
+      try {
+        const r = removeMirror(mirrorPath, { expectedTarget });
+        if (r.warning) {
+          process.stderr.write(`warning: ${r.warning}\n`);
+        }
+      } catch (err) {
+        process.stderr.write(
+          `warning: failed to remove discovery mirror at ${mirrorPath}: ${err.message}\n`,
+        );
+      }
+    }
   }
   const manifest = readManifest(dir);
   delete manifest[entry.installedName];

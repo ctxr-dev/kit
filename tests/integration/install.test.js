@@ -4,7 +4,9 @@ import { spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   existsSync,
+  lstatSync,
   readFileSync,
+  realpathSync,
   mkdirSync,
   symlinkSync,
   writeFileSync,
@@ -13,6 +15,10 @@ import {
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+
+import { ARTIFACT_TYPES } from "../../src/lib/types.js";
+import { installFolder } from "../../src/installers/folder.js";
+import { installFile } from "../../src/installers/file.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI = join(__dirname, "..", "..", "src", "cli.js");
@@ -258,15 +264,85 @@ describe("install command", () => {
   });
 
   describe("--user flag", () => {
-    it("installs to fakeHome ~/.claude/<type>/", () => {
-      // valid-skill is a skill → ~/.claude/skills/
+    it("installs canonical to ~/.agents/<type>/ with mirrors at ~/.claude/ and ~/.codex/", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
       const { exitCode } = install(
         `${join(FIXTURES, "skill", "valid")} --user`,
       );
       assert.equal(exitCode, 0);
 
-      const userSkillDir = join(fakeHome, ".claude", "skills", "valid-skill");
-      assert.ok(existsSync(join(userSkillDir, "SKILL.md")));
+      const canonical = join(fakeHome, ".agents", "skills", "valid-skill");
+      assert.ok(existsSync(join(canonical, "SKILL.md")), "canonical SKILL.md");
+      // The lstat on the canonical path must NOT be a symlink — it's the real dir.
+      assert.equal(lstatSync(canonical).isSymbolicLink(), false);
+
+      // Mirrors at ~/.claude/skills/ and ~/.codex/skills/ are symlinks.
+      const claudeMirror = join(fakeHome, ".claude", "skills", "valid-skill");
+      const codexMirror = join(fakeHome, ".codex", "skills", "valid-skill");
+      assert.equal(lstatSync(claudeMirror).isSymbolicLink(), true);
+      assert.equal(lstatSync(codexMirror).isSymbolicLink(), true);
+      // Mirrors resolve to the canonical.
+      assert.equal(realpathSync(claudeMirror), realpathSync(canonical));
+      assert.equal(realpathSync(codexMirror), realpathSync(canonical));
+    });
+
+    it("manifest entry records discoveryMirrors", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
+      install(`${join(FIXTURES, "skill", "valid")} --user`);
+      const manifest = JSON.parse(
+        readFileSync(
+          join(fakeHome, ".agents", "skills", ".ctxr-manifest.json"),
+          "utf8",
+        ),
+      );
+      const entry = manifest["valid-skill"];
+      assert.ok(entry);
+      assert.ok(Array.isArray(entry.discoveryMirrors));
+      assert.equal(entry.discoveryMirrors.length, 2);
+    });
+  });
+
+  describe("project-scope auto-default", () => {
+    it("installs canonical to <project>/.agents/<type>/ with .claude mirror", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
+      // Run from inside projectDir so the auto-default picks .agents under it.
+      const r = spawnSync(
+        "node",
+        [CLI, "install", join(FIXTURES, "skill", "valid")],
+        {
+          encoding: "utf8",
+          env: { ...process.env, HOME: fakeHome, CI: "true" },
+          cwd: projectDir,
+        },
+      );
+      assert.equal(r.status, 0, `stderr: ${r.stderr}`);
+
+      const canonical = join(projectDir, ".agents", "skills", "valid-skill");
+      assert.ok(existsSync(join(canonical, "SKILL.md")));
+      assert.equal(lstatSync(canonical).isSymbolicLink(), false);
+
+      const claudeMirror = join(projectDir, ".claude", "skills", "valid-skill");
+      assert.equal(lstatSync(claudeMirror).isSymbolicLink(), true);
+      assert.equal(realpathSync(claudeMirror), realpathSync(canonical));
+    });
+  });
+
+  describe("--dir flag skips mirror emission", () => {
+    it("custom --dir does NOT create .claude/ mirror", () => {
+      const targetDir = join(projectDir, "custom-skills");
+      const { exitCode } = install(
+        `${join(FIXTURES, "skill", "valid")} --dir ${targetDir}`,
+      );
+      assert.equal(exitCode, 0);
+      assert.ok(existsSync(join(targetDir, "valid-skill", "SKILL.md")));
+      // No .claude/ mirror should appear when user explicitly named --dir.
+      assert.equal(existsSync(join(projectDir, ".claude")), false);
     });
   });
 
@@ -289,6 +365,99 @@ describe("install command", () => {
       assert.ok(stderr.includes("--dir"));
       assert.ok(stderr.includes("--user"));
       assert.ok(stderr.includes("--interactive"));
+    });
+  });
+
+  describe("idempotent mirror recording (BUG FIX B)", () => {
+    // Regression for BUG FIX B: mirrors are recorded in the manifest when
+    // `r.created || (r.kind === "noop" && !r.warning)` — i.e. an
+    // already-correct mirror (a `noop` with no warning) is recorded too, not
+    // only freshly-created ones. The pre-fix code recorded only `r.created`
+    // mirrors, so a re-install whose mirror already existed dropped the mirror
+    // from discoveryMirrors, and a later `kit remove` orphaned the symlink.
+    //
+    // A direct second `kit install` is blocked by the "already installed"
+    // guard, so the idempotent path is exercised by re-running the installer
+    // after deleting ONLY the canonical dir/file (leaving the correct mirror
+    // in place) — the same on-disk state a partial/interrupted run leaves.
+    it("folder install re-records an already-correct mirror in discoveryMirrors", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
+      const targetRoot = join(projectDir, ".agents", "skills");
+      const baseOpts = {
+        sourceDir: join(FIXTURES, "skill", "valid"),
+        targetRoot,
+        type: "skill",
+        packageName: "valid-skill",
+        source: join(FIXTURES, "skill", "valid"),
+        sourceType: "local",
+        version: "1.0.0",
+        typeCfg: ARTIFACT_TYPES.skill,
+        projectPath: projectDir,
+      };
+
+      const first = installFolder(baseOpts);
+      const mirror = join(projectDir, ".claude", "skills", "valid-skill");
+      assert.ok(first.discoveryMirrors.includes(mirror));
+      assert.equal(lstatSync(mirror).isSymbolicLink(), true);
+
+      // Delete ONLY the canonical dir + its manifest row, leaving the correct
+      // mirror symlink in place, then install again so the mirror is a noop.
+      rmSync(join(targetRoot, "valid-skill"), { recursive: true, force: true });
+      rmSync(join(targetRoot, ".ctxr-manifest.json"), { force: true });
+
+      const second = installFolder(baseOpts);
+      // The mirror already existed and is correct (noop, no warning) — it MUST
+      // still be recorded so a subsequent `kit remove` cleans it up.
+      assert.ok(
+        second.discoveryMirrors.includes(mirror),
+        `idempotent install must still record the already-correct mirror: ${JSON.stringify(second.discoveryMirrors)}`,
+      );
+      const manifest = JSON.parse(
+        readFileSync(join(targetRoot, ".ctxr-manifest.json"), "utf8"),
+      );
+      assert.ok(manifest["valid-skill"].discoveryMirrors.includes(mirror));
+    });
+
+    it("file install re-records an already-correct mirror in discoveryMirrors", function (t) {
+      if (process.platform === "win32") {
+        return t.skip("symlink mirrors require POSIX or Windows dev mode");
+      }
+      const targetRoot = join(projectDir, ".agents", "agents");
+      const baseOpts = {
+        sourceDir: join(FIXTURES, "agent", "file-minimal"),
+        targetRoot,
+        type: "agent",
+        packageName: "agent-file-minimal",
+        source: join(FIXTURES, "agent", "file-minimal"),
+        sourceType: "local",
+        version: "1.0.0",
+        typeCfg: ARTIFACT_TYPES.agent,
+        projectPath: projectDir,
+      };
+
+      const first = installFile(baseOpts);
+      const destBasename = first.installedPaths[0].split("/").pop();
+      const mirror = join(projectDir, ".claude", "agents", destBasename);
+      assert.ok(first.discoveryMirrors.includes(mirror));
+      assert.equal(lstatSync(mirror).isSymbolicLink(), true);
+
+      // Delete ONLY the canonical file + manifest row, leaving the mirror.
+      rmSync(first.installedPaths[0], { force: true });
+      rmSync(join(targetRoot, ".ctxr-manifest.json"), { force: true });
+
+      const second = installFile(baseOpts);
+      assert.ok(
+        second.discoveryMirrors.includes(mirror),
+        `idempotent file install must still record the already-correct mirror: ${JSON.stringify(second.discoveryMirrors)}`,
+      );
+      const manifest = JSON.parse(
+        readFileSync(join(targetRoot, ".ctxr-manifest.json"), "utf8"),
+      );
+      assert.ok(
+        manifest["agent-file-minimal"].discoveryMirrors.includes(mirror),
+      );
     });
   });
 

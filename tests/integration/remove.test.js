@@ -206,7 +206,7 @@ describe("remove command", () => {
       // Team manifest entry dropped
       const teamManifest = JSON.parse(
         readFileSync(
-          join(projectDir, ".claude", "teams", ".ctxr-manifest.json"),
+          join(projectDir, ".agents", "teams", ".ctxr-manifest.json"),
           "utf8",
         ),
       );
@@ -239,7 +239,7 @@ describe("remove command", () => {
       // But the team manifest row is gone
       const teamManifest = JSON.parse(
         readFileSync(
-          join(projectDir, ".claude", "teams", ".ctxr-manifest.json"),
+          join(projectDir, ".agents", "teams", ".ctxr-manifest.json"),
           "utf8",
         ),
       );

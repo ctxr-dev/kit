@@ -107,7 +107,7 @@ describe("kit install — team cascade", () => {
     // Team manifest recorded the members
     const teamManifestPath = join(
       projectDir,
-      ".claude",
+      ".agents",
       "teams",
       ".ctxr-manifest.json",
     );
@@ -147,7 +147,7 @@ describe("kit install — team cascade", () => {
     // Team manifest records only the successfully installed members
     const teamManifest = JSON.parse(
       readFileSync(
-        join(projectDir, ".claude", "teams", ".ctxr-manifest.json"),
+        join(projectDir, ".agents", "teams", ".ctxr-manifest.json"),
         "utf8",
       ),
     );
@@ -200,7 +200,7 @@ describe("kit install — team cascade", () => {
 
     const teamManifest = JSON.parse(
       readFileSync(
-        join(projectDir, ".claude", "teams", ".ctxr-manifest.json"),
+        join(projectDir, ".agents", "teams", ".ctxr-manifest.json"),
         "utf8",
       ),
     );
@@ -272,7 +272,7 @@ describe("kit install — team cascade", () => {
     // User-scope team manifest
     const teamManifest = JSON.parse(
       readFileSync(
-        join(fakeHome, ".claude", "teams", ".ctxr-manifest.json"),
+        join(fakeHome, ".agents", "teams", ".ctxr-manifest.json"),
         "utf8",
       ),
     );

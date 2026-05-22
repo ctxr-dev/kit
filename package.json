@@ -1,7 +1,7 @@
 {
   "name": "@ctxr/kit",
   "version": "1.2.2",
-  "description": "Universal CLI for Claude Code artifacts — install, validate, update, and scaffold skills, agents, commands, rules, output-styles, and teams.",
+  "description": "Universal CLI for Agent Skills artifacts (Claude Code, Codex CLI, OpenCode): install, validate, update, and scaffold skills, agents, commands, rules, output-styles, and teams under .agents/ with auto discovery mirrors at .claude/ and ~/.codex/.",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -20,11 +20,19 @@
   },
   "files": [
     "src/",
-    "templates/"
+    "templates/",
+    "docs/subagent-dispatch-v1.md",
+    "CHANGELOG.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
-    "ctxr",
+    "agent-skills",
+    "agents-md",
+    "codex",
     "claude-code",
+    "ctxr",
     "cli",
     "ai",
     "skills",
@@ -47,6 +55,7 @@
     "test:integration": "node --test tests/integration/install.test.js tests/integration/update.test.js tests/integration/remove.test.js tests/integration/list.test.js tests/integration/validate.test.js tests/integration/info.test.js tests/integration/init.test.js",
     "test:e2e": "node --test tests/integration/e2e-multi-location.test.js",
     "validate": "node src/cli.js --version",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prepublishOnly": "npm test"
   }
 }

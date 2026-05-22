@@ -7,7 +7,7 @@
  * install. Cycle detection prevents `team A → team B → team A` from looping.
  *
  * Records the successfully-installed members into a team manifest entry at
- * `<targetBase>/.claude/teams/.ctxr-manifest.json` (or `~/.claude/teams/…`
+ * `<targetBase>/.agents/teams/.ctxr-manifest.json` (or `~/.agents/teams/…`
  * when `--user`). Teams have no project/user "type directory" the way
  * artifacts do, so this dedicated `teams/` location keeps uniformity with
  * the per-type manifest layout without polluting the registry.
@@ -28,13 +28,13 @@ import { installedName } from "../lib/types.js";
  * Resolve the manifest directory for team entries.
  *
  * Preference order:
- *   1. `--user` → `~/.claude/teams/`
+ *   1. `--user` → `~/.agents/teams/`
  *   2. `dir` override (synthesized by the install orchestrator's
  *      `buildCascadeFlags`) → `<dir>/teams/`. This is the knob that
  *      routes CUSTOM / EXPLICIT_DIR / PROJECT_AGENTS strategies so the
  *      team manifest lands next to its members instead of getting stuck
- *      at the project default `.claude/` tree.
- *   3. fallback → `<projectPath>/.claude/teams/`
+ *      at the project default location.
+ *   3. fallback → `<projectPath>/.agents/teams/`
  *
  * @param {object} opts
  * @param {string} opts.projectPath — absolute project root
@@ -43,12 +43,12 @@ import { installedName } from "../lib/types.js";
  */
 function resolveTeamManifestDir({ projectPath, user, dir }) {
   if (user) {
-    return join(homedir(), ".claude", "teams");
+    return join(homedir(), ".agents", "teams");
   }
   if (dir) {
     return join(dir, "teams");
   }
-  return join(projectPath, ".claude", "teams");
+  return join(projectPath, ".agents", "teams");
 }
 
 /**

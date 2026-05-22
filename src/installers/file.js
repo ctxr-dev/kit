@@ -2,14 +2,18 @@
  * target: "file" installer.
  *
  * Copies a single artifact file from the package payload directly into
- * `.claude/<typeDir>/` with no wrapper folder, preserving its original
+ * `.agents/<typeDir>/` with no wrapper folder, preserving its original
  * basename. The package must ship a payload that resolves to **exactly one
  * artifact file** once npm's always-include metadata (package.json, README*,
  * LICENSE*, CHANGELOG*, NOTICE*) is filtered out — otherwise the install is
  * rejected and the caller records the error without aborting the batch.
  *
- * The single file must be `.md` because Claude Code's file-discovery scans
+ * The single file must be `.md` because every Agent Skills harness scans
  * for markdown artifacts. A non-`.md` single file is rejected.
+ *
+ * After the canonical write, kit creates discovery-mirror symlinks at
+ * legacy / per-client paths (`.claude/<type>/<basename>` etc) so harnesses
+ * that don't read `.agents/` natively still find the artefact.
  *
  * Writes a type-aware manifest entry keyed by `installedName`.
  *
@@ -29,11 +33,13 @@
 import { cpSync, existsSync, lstatSync, mkdirSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 import { packagePayload } from "../lib/payload.js";
+import { ensureMirror } from "../lib/symlink.js";
 import { installedName } from "../lib/types.js";
 import {
   resolveFileTargetArtifact,
   writeArtifactManifest,
 } from "./manifest-writer.js";
+import { resolveMirrorPaths } from "./mirrors.js";
 
 /**
  * Install a file-target artifact.
@@ -52,6 +58,8 @@ export function installFile(opts) {
     version,
     integrity,
     commit,
+    typeCfg,
+    projectPath,
   } = opts;
 
   const payload = packagePayload(sourceDir);
@@ -98,6 +106,45 @@ export function installFile(opts) {
   }
 
   const name = installedName(packageName);
+
+  // Discovery mirrors: only emitted when the canonical destination is under
+  // a recognised `.agents/<type>/` or `~/.agents/<type>/` root and typeCfg
+  // is supplied. Custom `--dir` installs skip this by design.
+  const mirrorTargets =
+    typeCfg && projectPath
+      ? resolveMirrorPaths({
+          targetRoot,
+          projectPath,
+          discoveryMirrors: typeCfg.discoveryMirrors,
+          basenameToMirror: destBasename,
+        })
+      : [];
+  const createdMirrors = [];
+  for (const mirrorPath of mirrorTargets) {
+    try {
+      const r = ensureMirror({
+        canonicalPath: destFile,
+        mirrorPath,
+        target: "file",
+      });
+      if (r.warning) {
+        process.stderr.write(`warning: ${r.warning}\n`);
+      }
+      // Record the mirror whenever it is a valid kit-owned mirror: a fresh
+      // create, OR a `noop` with no warning (the mirror already existed and
+      // is correct). A `noop` WITH a warning means the path was refused (a
+      // real dir/file not owned by kit) and must not be recorded, else
+      // `kit remove` would later try to clean up a path it doesn't own.
+      if (r.created || (r.kind === "noop" && !r.warning)) {
+        createdMirrors.push(mirrorPath);
+      }
+    } catch (err) {
+      process.stderr.write(
+        `warning: failed to create discovery mirror at ${mirrorPath}: ${err.message}\n`,
+      );
+    }
+  }
+
   writeArtifactManifest({
     targetRoot,
     installedName: name,
@@ -109,7 +156,12 @@ export function installFile(opts) {
     integrity,
     commit,
     installedPaths: [destFile],
+    discoveryMirrors: createdMirrors,
   });
 
-  return { installedName: name, installedPaths: [destFile] };
+  return {
+    installedName: name,
+    installedPaths: [destFile],
+    discoveryMirrors: createdMirrors,
+  };
 }

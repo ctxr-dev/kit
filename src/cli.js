@@ -65,7 +65,7 @@ Interactive mode (default):
 
 Install-time options (for 'install'; forwarded by 'update --install'):
   --dir <path>              Install into a specific directory (skips menu)
-  --user                    Install to ~/.claude/<type>/ (skips menu)
+  --user                    Install to ~/.agents/<type>/ (skips menu)
 
 Exit codes:
   0  success

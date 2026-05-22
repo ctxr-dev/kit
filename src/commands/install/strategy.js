@@ -9,11 +9,16 @@
  * Strategies (symbolic values, intentionally strings so they survive
  * tests that log flags / options):
  *
- *   PROJECT_CLAUDE   → <projectPath>/.claude/<type>/
- *   PROJECT_AGENTS   → <projectPath>/.agents/<type>/
- *   USER_GLOBAL      → <homedir>/.claude/<type>/
+ *   PROJECT_AGENTS   → <projectPath>/.agents/<type>/   (canonical)
+ *   USER_GLOBAL      → <homedir>/.agents/<type>/        (canonical, user scope)
  *   CUSTOM           → user-provided absolute or relative path
  *   EXPLICIT_DIR     → raw `--dir <path>` value (skips menu entirely)
+ *
+ * After the canonical-paths flip, `.claude/<type>/` is no longer a
+ * destination — it is a discovery mirror created automatically by the
+ * folder/file installers via `src/installers/mirrors.js`. Harnesses that
+ * still read `.claude/` (Claude Code) find the mirror; harnesses that
+ * read `.agents/` (Codex CLI, OpenCode) find the canonical.
  *
  * All rendering of the shared destination menu + the user's custom-path
  * text prompt lives here. The install orchestrator just calls
@@ -21,13 +26,11 @@
  * explicitDir, explicitByFlag}` result back.
  */
 
-import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
 
 // Strategy symbols — kept as plain string constants so they log cleanly
 // in test outputs and debugger views.
-export const STRATEGY_PROJECT_CLAUDE = "project-claude";
 export const STRATEGY_PROJECT_AGENTS = "project-agents";
 export const STRATEGY_USER_GLOBAL = "user-global";
 export const STRATEGY_CUSTOM = "custom";
@@ -116,15 +119,8 @@ export function strategyToTarget(
   projectPath,
 ) {
   switch (strategy) {
-    case STRATEGY_PROJECT_CLAUDE: {
-      const rel = typeCfg.projectDirs[0];
-      if (!rel) {
-        throw new Error("type has no project directory (team meta-type)");
-      }
-      return join(projectPath, rel);
-    }
     case STRATEGY_PROJECT_AGENTS: {
-      const rel = typeCfg.projectDirs[1] ?? typeCfg.projectDirs[0];
+      const rel = typeCfg.projectDirs[0];
       if (!rel) {
         throw new Error("type has no project directory (team meta-type)");
       }
@@ -134,7 +130,7 @@ export function strategyToTarget(
       if (!typeCfg.userDir) {
         throw new Error("type has no user directory (team meta-type)");
       }
-      return join(homedir(), ".claude", typeCfg.userDir);
+      return join(homedir(), ".agents", typeCfg.userDir);
     }
     case STRATEGY_CUSTOM: {
       if (!customPath) {
@@ -162,7 +158,7 @@ export function strategyToTarget(
  *
  * Load-bearing for team manifest placement: `src/installers/team.js`
  * reads `flags.user` to decide whether the team manifest entry lives
- * at `.claude/teams/` (project) or `~/.claude/teams/` (user-global).
+ * at `.agents/teams/` (project) or `~/.agents/teams/` (user-global).
  *
  * For INDIVIDUAL members (the recursive `installOne` calls), these
  * synthetic flags are mostly inert — the install orchestrator resolves
@@ -174,8 +170,6 @@ export function buildCascadeFlags(chosen, projectPath) {
   switch (chosen.strategy) {
     case STRATEGY_USER_GLOBAL:
       return { user: true, dir: null };
-    case STRATEGY_PROJECT_CLAUDE:
-      return { user: false, dir: join(projectPath, ".claude") };
     case STRATEGY_PROJECT_AGENTS:
       return { user: false, dir: join(projectPath, ".agents") };
     case STRATEGY_CUSTOM:
@@ -188,30 +182,16 @@ export function buildCascadeFlags(chosen, projectPath) {
 }
 
 /**
- * Compute the auto-detect default strategy for a batch. Walks each
- * descriptor's type candidates in order (`.claude/<type>/`,
- * `.agents/<type>/`, `~/.claude/<type>/`) and picks the first one that
- * has an existing directory. Falls back to PROJECT_CLAUDE (Claude
- * Code's native discovery location) for a fresh project.
+ * Compute the auto-detect default strategy for a batch.
+ *
+ * After the canonical-paths flip there is only one project-scope
+ * destination, so the auto-default is always PROJECT_AGENTS. The legacy
+ * `.claude/<type>/` existence probe is preserved here only as a hook for
+ * a "we will migrate these on install" stderr warning that the installer
+ * can hang on top — see `src/lib/migrate.js`.
  */
 export function autoDefaultStrategy(descriptors, projectPath) {
-  const installable = descriptors.filter(
-    (d) => !d.error && d.type && d.type !== "team",
-  );
-  if (installable.length === 0) return STRATEGY_PROJECT_CLAUDE;
-
-  const anyClaude = installable.some((d) =>
-    existsSync(join(projectPath, d.typeCfg.projectDirs[0] ?? "")),
-  );
-  if (anyClaude) return STRATEGY_PROJECT_CLAUDE;
-
-  const anyAgents = installable.some((d) => {
-    const rel = d.typeCfg.projectDirs[1];
-    return rel && existsSync(join(projectPath, rel));
-  });
-  if (anyAgents) return STRATEGY_PROJECT_AGENTS;
-
-  return STRATEGY_PROJECT_CLAUDE;
+  return STRATEGY_PROJECT_AGENTS;
 }
 
 /**
@@ -252,18 +232,13 @@ export function buildSharedMenuOptions(descriptors, projectPath) {
 
   return [
     {
-      value: STRATEGY_PROJECT_CLAUDE,
-      label: "project-local (Claude Code native)",
-      hint: labelFor(STRATEGY_PROJECT_CLAUDE),
-    },
-    {
       value: STRATEGY_PROJECT_AGENTS,
-      label: "project-local (cross-tool standard)",
+      label: "project-local (.agents/) — Claude Code, Codex CLI, OpenCode",
       hint: labelFor(STRATEGY_PROJECT_AGENTS),
     },
     {
       value: STRATEGY_USER_GLOBAL,
-      label: "user-global",
+      label: "user-global (~/.agents/)",
       hint: labelFor(STRATEGY_USER_GLOBAL),
     },
     {
