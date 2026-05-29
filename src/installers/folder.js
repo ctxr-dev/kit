@@ -84,7 +84,7 @@ export function installFolder(opts) {
 
   if (existsSync(destDir)) {
     throw new Error(
-      `already installed at ${destDir} — use 'npx @ctxr/kit update' or 'npx @ctxr/kit remove' first`,
+      `already installed at ${destDir} — use 'npx @ctxr/kit@latest update' or 'npx @ctxr/kit@latest remove' first`,
     );
   }
 

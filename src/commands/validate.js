@@ -51,7 +51,7 @@ const VALIDATORS = Object.freeze({
 });
 
 function printUsage() {
-  console.error("Usage: npx @ctxr/kit validate [path]");
+  console.error("Usage: npx @ctxr/kit@latest validate [path]");
   console.error("");
   console.error("Validate a ctxr artifact package before publishing.");
   console.error("");

@@ -240,7 +240,7 @@ async function updateOne(match, projectPath, flags, forwardedOpts) {
   const { typeName, dir, entry } = match;
   if (!entry.source) {
     console.log(
-      `  ⚠ ${entry.installedName}: no recorded source, reinstall via 'npx @ctxr/kit install'`,
+      `  ⚠ ${entry.installedName}: no recorded source, reinstall via 'npx @ctxr/kit@latest install'`,
     );
     return { ok: false, skipped: true };
   }
@@ -329,7 +329,7 @@ async function updateOne(match, projectPath, flags, forwardedOpts) {
 }
 
 function printUsage() {
-  console.error("Usage: npx @ctxr/kit update [identifier]... [project-path] [options]");
+  console.error("Usage: npx @ctxr/kit@latest update [identifier]... [project-path] [options]");
   console.error("");
   console.error("Re-install one or every artifact from its recorded `source`.");
   console.error("");
@@ -348,10 +348,10 @@ function printUsage() {
   console.error("  -h, --help         Show this help");
   console.error("");
   console.error("Examples:");
-  console.error("  npx @ctxr/kit update");
-  console.error("  npx @ctxr/kit update ctxr-skill-code-review");
-  console.error("  npx @ctxr/kit update @ctxr/skill-foo --install");
-  console.error("  npx @ctxr/kit update @ctxr/a @ctxr/b --install --yes");
+  console.error("  npx @ctxr/kit@latest update");
+  console.error("  npx @ctxr/kit@latest update ctxr-skill-code-review");
+  console.error("  npx @ctxr/kit@latest update @ctxr/skill-foo --install");
+  console.error("  npx @ctxr/kit@latest update @ctxr/a @ctxr/b --install --yes");
 }
 
 export default async function update(args, opts = {}) {
@@ -437,7 +437,7 @@ export default async function update(args, opts = {}) {
     const groups = listAllInstalled(projectPath);
     if (groups.length === 0) {
       throw new Error(
-        "No artifacts installed. Use 'npx @ctxr/kit install' first.",
+        "No artifacts installed. Use 'npx @ctxr/kit@latest install' first.",
       );
     }
     matches = [];

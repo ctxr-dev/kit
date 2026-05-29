@@ -189,7 +189,7 @@ function parseArgs(args) {
 }
 
 function printUsage() {
-  console.error("Usage: npx @ctxr/kit init [name] [options]");
+  console.error("Usage: npx @ctxr/kit@latest init [name] [options]");
   console.error("");
   console.error("Scaffold a new ctxr artifact package via a 9-question wizard.");
   console.error("Each wizard step is bypassed by passing the matching flag.");
@@ -217,9 +217,9 @@ function printUsage() {
   console.error("  -h, --help          show this help");
   console.error("");
   console.error("Examples:");
-  console.error("  npx @ctxr/kit init my-skill");
-  console.error("  npx @ctxr/kit init my-agent --type agent");
-  console.error("  npx @ctxr/kit init my-skill --yes --description 'Reviews code'");
+  console.error("  npx @ctxr/kit@latest init my-skill");
+  console.error("  npx @ctxr/kit@latest init my-agent --type agent");
+  console.error("  npx @ctxr/kit@latest init my-skill --yes --description 'Reviews code'");
 }
 
 // ─── The 9 wizard questions ──────────────────────────────────────────────
@@ -595,7 +595,7 @@ export default async function init(args, opts = {}) {
 
     console.log("  Next steps:");
     console.log(`    1. Edit the generated files to describe your ${type}`);
-    console.log("    2. Run 'npx @ctxr/kit validate' to check structure");
+    console.log("    2. Run 'npx @ctxr/kit@latest validate' to check structure");
     console.log();
 
     prompt.outro?.(`${name} scaffolded at ${targetDir}`, flags);

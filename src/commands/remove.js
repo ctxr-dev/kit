@@ -128,7 +128,7 @@ function parseArgs(args) {
 }
 
 function printUsage() {
-  console.error("Usage: npx @ctxr/kit remove <identifier>... [project-path] [options]");
+  console.error("Usage: npx @ctxr/kit@latest remove <identifier>... [project-path] [options]");
   console.error("");
   console.error("Options:");
   console.error("  -y, --yes          Skip confirmation AND remove from every matching location");
@@ -138,10 +138,10 @@ function printUsage() {
   console.error("  -h, --help         Show this help");
   console.error("");
   console.error("Examples:");
-  console.error("  npx @ctxr/kit remove ctxr-skill-code-review");
-  console.error("  npx @ctxr/kit remove @ctxr/skill-code-review --yes");
-  console.error("  npx @ctxr/kit remove ctxr-bundle-full-stack --keep-members");
-  console.error("  npx @ctxr/kit remove a b c --yes");
+  console.error("  npx @ctxr/kit@latest remove ctxr-skill-code-review");
+  console.error("  npx @ctxr/kit@latest remove @ctxr/skill-code-review --yes");
+  console.error("  npx @ctxr/kit@latest remove ctxr-bundle-full-stack --keep-members");
+  console.error("  npx @ctxr/kit@latest remove a b c --yes");
 }
 
 /**

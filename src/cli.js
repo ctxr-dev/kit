@@ -8,7 +8,7 @@
  * plus ctxr "bundle" meta-packages that group several artifacts together.
  *
  * Usage:
- *   npx @ctxr/kit <command> [options]
+ *   npx @ctxr/kit@latest <command> [options]
  *
  * The CLI itself is just a router. It decodes `--help` / `--version` and
  * dispatches everything else to a per-command module under `commands/`.
@@ -35,7 +35,7 @@ function printUsage() {
 @ctxr/kit — universal CLI for Claude Code artifacts
 
 Usage:
-  npx @ctxr/kit <command> [options]
+  npx @ctxr/kit@latest <command> [options]
 
 Commands:
   install <source>...       Install one or more artifacts (npm, github:, local)
@@ -73,14 +73,14 @@ Exit codes:
   2  usage error (unknown command, unknown flag, missing argument)
 
 Examples:
-  npx @ctxr/kit install @ctxr/skill-code-review
-  npx @ctxr/kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c
-  npx @ctxr/kit install @ctxr/bundle-full-stack --user
-  npx @ctxr/kit init --type agent my-agent
-  npx @ctxr/kit list
-  npx @ctxr/kit validate ./my-skill
+  npx @ctxr/kit@latest install @ctxr/skill-code-review
+  npx @ctxr/kit@latest install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c
+  npx @ctxr/kit@latest install @ctxr/bundle-full-stack --user
+  npx @ctxr/kit@latest init --type agent my-agent
+  npx @ctxr/kit@latest list
+  npx @ctxr/kit@latest validate ./my-skill
 
-Run 'npx @ctxr/kit <command> --help' for command-specific options.
+Run 'npx @ctxr/kit@latest <command> --help' for command-specific options.
 `);
 }
 
@@ -109,7 +109,7 @@ async function main() {
   const loader = COMMANDS[command];
   if (!loader) {
     console.error(`Unknown command: ${command}`);
-    console.error(`Run 'npx @ctxr/kit --help' for usage information.`);
+    console.error(`Run 'npx @ctxr/kit@latest --help' for usage information.`);
     // POSIX-ish convention: 2 = usage error, 1 = runtime failure.
     process.exit(2);
   }

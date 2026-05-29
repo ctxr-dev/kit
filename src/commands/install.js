@@ -145,7 +145,7 @@ export function parseArgs(args) {
 }
 
 function printUsage() {
-  console.error("Usage: npx @ctxr/kit install <source> [<source>...] [options]");
+  console.error("Usage: npx @ctxr/kit@latest install <source> [<source>...] [options]");
   console.error("");
   console.error("Sources:");
   console.error("  @scope/name[@version]    npm package spec");
@@ -165,10 +165,10 @@ function printUsage() {
   console.error("  pass --yes to skip prompts and fall through to auto-detect.");
   console.error("");
   console.error("Examples:");
-  console.error("  npx @ctxr/kit install @ctxr/skill-code-review");
-  console.error("  npx @ctxr/kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c");
-  console.error("  npx @ctxr/kit install @ctxr/bundle-full-stack --user");
-  console.error("  npx @ctxr/kit install ./my-local-skill --yes");
+  console.error("  npx @ctxr/kit@latest install @ctxr/skill-code-review");
+  console.error("  npx @ctxr/kit@latest install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c");
+  console.error("  npx @ctxr/kit@latest install @ctxr/bundle-full-stack --user");
+  console.error("  npx @ctxr/kit@latest install ./my-local-skill --yes");
 }
 
 // ─── Metadata fetch (phase 1) ────────────────────────────────────────────

@@ -1,7 +1,7 @@
 /**
  * Interactive-mode detection and `@clack/prompts` wrappers for kit commands.
  *
- * Kit is **interactive by default** — a user running `npx @ctxr/kit install X`
+ * Kit is **interactive by default** — a user running `npx @ctxr/kit@latest install X`
  * in a terminal is prompted for destination, confirmations, and wizard fields.
  * Non-interactive execution is explicit and covers four signals with this
  * precedence (most-to-least override-y):

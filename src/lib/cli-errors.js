@@ -68,6 +68,6 @@ export function isFlagLike(arg) {
  */
 export function unknownFlagError(flag, command) {
   return usageError(
-    `Unknown flag: ${flag} (run 'npx @ctxr/kit ${command} --help' for valid flags)`,
+    `Unknown flag: ${flag} (run 'npx @ctxr/kit@latest ${command} --help' for valid flags)`,
   );
 }

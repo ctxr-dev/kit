@@ -375,7 +375,7 @@ describe("init command", () => {
     it("exits 0 and prints usage", () => {
       const r = runInit(["--help"]);
       assert.equal(r.exitCode, 0);
-      assert.match(r.stderr, /Usage: npx @ctxr\/kit init/);
+      assert.match(r.stderr, /Usage: npx @ctxr\/kit@latest init/);
       assert.match(r.stderr, /--type/);
     });
   });

@@ -75,14 +75,14 @@ describe("CLI entry point", () => {
       }
     });
 
-    it("uses 'npx @ctxr/kit' as the invocation form in usage and examples", () => {
+    it("uses 'npx @ctxr/kit@latest' as the invocation form in usage and examples", () => {
       // Kit is run exclusively via npx — the help text must advertise the
       // full npx invocation so a new user who pastes any line from the
       // examples block gets a working command, with no 'npm i -g' step
       // between them and their first success.
       const { stdout } = run("--help");
-      assert.match(stdout, /Usage:\s+npx @ctxr\/kit\s</);
-      assert.match(stdout, /npx @ctxr\/kit install /);
+      assert.match(stdout, /Usage:\s+npx @ctxr\/kit@latest\s</);
+      assert.match(stdout, /npx @ctxr\/kit@latest install /);
     });
 
     it("brands the tool as @ctxr/kit (not the legacy @ctxr-dev/skills)", () => {
@@ -146,9 +146,9 @@ describe("CLI entry point", () => {
       assert.ok(stderr.includes("Unknown command"));
     });
 
-    it("hints at 'npx @ctxr/kit --help' (not the legacy 'skills --help')", () => {
+    it("hints at 'npx @ctxr/kit@latest --help' (not the legacy 'skills --help')", () => {
       const { stderr } = run("nonexistent");
-      assert.match(stderr, /npx @ctxr\/kit --help/);
+      assert.match(stderr, /npx @ctxr\/kit@latest --help/);
       assert.ok(
         !stderr.includes("skills --help"),
         "unknown-command hint must use the new npx invocation form",

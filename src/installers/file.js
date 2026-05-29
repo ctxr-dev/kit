@@ -76,7 +76,7 @@ export function installFile(opts) {
 
   if (existsSync(destFile)) {
     throw new Error(
-      `already installed at ${destFile} — use 'npx @ctxr/kit update' or 'npx @ctxr/kit remove' first`,
+      `already installed at ${destFile} — use 'npx @ctxr/kit@latest update' or 'npx @ctxr/kit@latest remove' first`,
     );
   }
 
