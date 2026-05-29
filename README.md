@@ -14,16 +14,16 @@ and `~/.codex/<type>/<name>` so harnesses that don't read `.agents/` natively
 still find the artefact. The `package.json` `files` field is the single
 source of truth for what each package ships, and the manifest filename
 `.ctxr-manifest.json` is written per install root. Run the CLI via
-`npx @ctxr/kit`; no global install required.
+`npx @ctxr/kit@latest`; no global install required.
 
 ## Quick start
 
 ```bash
-npx @ctxr/kit install @ctxr/skill-code-review     # add the code-review skill
-npx @ctxr/kit list                                # see what's installed
+npx @ctxr/kit@latest install @ctxr/skill-code-review     # add the code-review skill
+npx @ctxr/kit@latest list                                # see what's installed
 ```
 
-That's the whole loop. Run `npx @ctxr/kit --help` for the full command set.
+That's the whole loop. Run `npx @ctxr/kit@latest --help` for the full command set.
 
 ## Prerequisites
 
@@ -40,11 +40,11 @@ That's the whole loop. Run `npx @ctxr/kit --help` for the full command set.
 Kit is run exclusively via `npx` — no global install required.
 
 ```bash
-npx @ctxr/kit <command>
+npx @ctxr/kit@latest <command>
 ```
 
-Every example below uses the `npx @ctxr/kit` form. If you prefer a short
-alias, add one to your shell (`alias kit='npx @ctxr/kit'`) — kit itself
+Every example below uses the `npx @ctxr/kit@latest` form. If you prefer a short
+alias, add one to your shell (`alias kit='npx @ctxr/kit@latest'`) — kit itself
 never asks you to install it globally.
 
 ## Interactive mode (default)
@@ -82,14 +82,14 @@ required:
 In non-interactive mode every prompt resolves to its declared default, and
 `install` never destructively moves an existing install — it updates in
 place at whatever location the artifact is currently at. This keeps
-automation stable: pipelines that run `npx @ctxr/kit install X` will
+automation stable: pipelines that run `npx @ctxr/kit@latest install X` will
 always land the artifact in a predictable place.
 
 ```bash
 # All equivalent — all three trigger silent, no-prompt behavior:
-npx @ctxr/kit install @ctxr/skill-code-review --yes
-CI=true npx @ctxr/kit install @ctxr/skill-code-review
-npx @ctxr/kit install @ctxr/skill-code-review < /dev/null
+npx @ctxr/kit@latest install @ctxr/skill-code-review --yes
+CI=true npx @ctxr/kit@latest install @ctxr/skill-code-review
+npx @ctxr/kit@latest install @ctxr/skill-code-review < /dev/null
 ```
 
 ### Forcing interactive mode in CI
@@ -177,33 +177,33 @@ installs it; if not, it doesn't.
 
 ## Commands
 
-### `npx @ctxr/kit install <source> [<source>...] [options]`
+### `npx @ctxr/kit@latest install <source> [<source>...] [options]`
 
 Install one or more artifacts in a single command. Sources can be mixed —
 npm packages, GitHub shorthand, and local paths all work side by side.
 
 ```bash
 # single artifact
-npx @ctxr/kit install @ctxr/skill-code-review
+npx @ctxr/kit@latest install @ctxr/skill-code-review
 
 # mixed batch — different types, different sources
-npx @ctxr/kit install \
+npx @ctxr/kit@latest install \
   @ctxr/skill-code-review \
   @ctxr/agent-researcher \
   @ctxr/rule-typescript-strict \
   github:ctxr-dev/output-style-teaching
 
 # bundle meta-package: cascades to every member
-npx @ctxr/kit install @ctxr/bundle-full-stack
+npx @ctxr/kit@latest install @ctxr/bundle-full-stack
 
 # user-global instead of project-local
-npx @ctxr/kit install @ctxr/skill-code-review --user
+npx @ctxr/kit@latest install @ctxr/skill-code-review --user
 
 # explicit destination
-npx @ctxr/kit install @ctxr/skill-code-review --dir .agents/skills
+npx @ctxr/kit@latest install @ctxr/skill-code-review --dir .agents/skills
 
 # local path (must start with ./, /, or ~/)
-npx @ctxr/kit install ./path/to/local-skill
+npx @ctxr/kit@latest install ./path/to/local-skill
 ```
 
 **Batch behavior:** if one package in the batch fails (broken `ctxr` block,
@@ -250,49 +250,49 @@ and creates the discovery mirrors automatically. If a legacy real
 `.claude/<type>/<name>/` install is found, the migration step above
 moves it to the canonical path before installing.
 
-### `npx @ctxr/kit update [name]`
+### `npx @ctxr/kit@latest update [name]`
 
 Re-install one or all artifacts in place using the source recorded in the
 manifest. Searches every project- and user-scope manifest, so you don't
 need to remember where each artifact lives.
 
 ```bash
-npx @ctxr/kit update                          # update everything
-npx @ctxr/kit update ctxr-skill-code-review   # update one
+npx @ctxr/kit@latest update                          # update everything
+npx @ctxr/kit@latest update ctxr-skill-code-review   # update one
 ```
 
 Team updates cascade to every member.
 
-### `npx @ctxr/kit remove <name> [--keep-members]`
+### `npx @ctxr/kit@latest remove <name> [--keep-members]`
 
 Remove an installed artifact (or bundle). For bundles, every member listed
 in the manifest is removed too unless `--keep-members` is passed.
 
 ```bash
-npx @ctxr/kit remove ctxr-skill-code-review
-npx @ctxr/kit remove ctxr-bundle-full-stack --keep-members
+npx @ctxr/kit@latest remove ctxr-skill-code-review
+npx @ctxr/kit@latest remove ctxr-bundle-full-stack --keep-members
 ```
 
-### `npx @ctxr/kit list [path]`
+### `npx @ctxr/kit@latest list [path]`
 
 List installed artifacts from every discovered location, grouped by type.
 
 ```bash
-npx @ctxr/kit list
-npx @ctxr/kit list ./other-project
+npx @ctxr/kit@latest list
+npx @ctxr/kit@latest list ./other-project
 ```
 
-### `npx @ctxr/kit info <source>`
+### `npx @ctxr/kit@latest info <source>`
 
 Show details about an installed or remote artifact: type, target layout,
 source, version, file count, install paths.
 
 ```bash
-npx @ctxr/kit info @ctxr/skill-code-review
-npx @ctxr/kit info ctxr-agent-researcher
+npx @ctxr/kit@latest info @ctxr/skill-code-review
+npx @ctxr/kit@latest info ctxr-agent-researcher
 ```
 
-### `npx @ctxr/kit validate [path]`
+### `npx @ctxr/kit@latest validate [path]`
 
 Validate an artifact package's structure ahead of publishing. Dispatches
 to a per-type validator: skill validation (frontmatter, broken-link
@@ -301,27 +301,27 @@ sanity checks plus the universal `target: "file"` ⇒ exactly-one-`.md`-file
 rule that the installer enforces.
 
 ```bash
-npx @ctxr/kit validate                  # validate package in current dir
-npx @ctxr/kit validate ./my-skill       # validate at a path
+npx @ctxr/kit@latest validate                  # validate package in current dir
+npx @ctxr/kit@latest validate ./my-skill       # validate at a path
 ```
 
-### `npx @ctxr/kit init [--type <type>] [name]`
+### `npx @ctxr/kit@latest init [--type <type>] [name]`
 
 Scaffold a new artifact package from a template. Defaults to
 `--type skill` because that's the most common authoring case.
 
 ```bash
-npx @ctxr/kit init my-skill                       # default --type skill
-npx @ctxr/kit init --type agent my-agent          # scaffold an agent
-npx @ctxr/kit init -t command deploy              # short-form flag
-npx @ctxr/kit init --type bundle bundle-full-stack  # scaffold a bundle meta-package
+npx @ctxr/kit@latest init my-skill                       # default --type skill
+npx @ctxr/kit@latest init --type agent my-agent          # scaffold an agent
+npx @ctxr/kit@latest init -t command deploy              # short-form flag
+npx @ctxr/kit@latest init --type bundle bundle-full-stack  # scaffold a bundle meta-package
 ```
 
 Each template ships a `package.json` with the right `ctxr` block already
 filled in, plus `README.md`, `LICENSE`, and `.gitignore` (the skill
 template additionally ships `.markdownlint.jsonc` and a starter
 `SKILL.md`; file-target templates ship a pre-named `ctxr-{{name}}.md`).
-The scaffolded result passes `npx @ctxr/kit validate` immediately — edit
+The scaffolded result passes `npx @ctxr/kit@latest validate` immediately — edit
 the contents, then publish.
 
 ## Global options
@@ -334,7 +334,7 @@ the contents, then publish.
 | `--help`, `-h`        | Show help (top-level or per-command)                     |
 | `--version`, `-v`     | Print the installed version of `@ctxr/kit`               |
 
-Run `npx @ctxr/kit <command> --help` for command-specific options.
+Run `npx @ctxr/kit@latest <command> --help` for command-specific options.
 
 ## Releasing
 

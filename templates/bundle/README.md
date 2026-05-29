@@ -5,7 +5,7 @@ An Agent Skills bundle (Claude Code, Codex CLI): installs several artifacts in o
 ## Installation
 
 ```bash
-npx @ctxr/kit install @ctxr/{{name}}
+npx @ctxr/kit@latest install @ctxr/{{name}}
 ```
 
 The installer will cascade-install every member listed in `ctxr.includes`.

@@ -5,7 +5,7 @@ An Agent Skills slash command (Claude Code, Codex CLI).
 ## Installation
 
 ```bash
-npx @ctxr/kit install @ctxr/{{name}}
+npx @ctxr/kit@latest install @ctxr/{{name}}
 ```
 
 Installs as a single `.md` file into `.agents/commands/<name>.md`.
