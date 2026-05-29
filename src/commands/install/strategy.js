@@ -122,13 +122,13 @@ export function strategyToTarget(
     case STRATEGY_PROJECT_AGENTS: {
       const rel = typeCfg.projectDirs[0];
       if (!rel) {
-        throw new Error("type has no project directory (team meta-type)");
+        throw new Error("type has no project directory (bundle meta-type)");
       }
       return join(projectPath, rel);
     }
     case STRATEGY_USER_GLOBAL: {
       if (!typeCfg.userDir) {
-        throw new Error("type has no user directory (team meta-type)");
+        throw new Error("type has no user directory (bundle meta-type)");
       }
       return join(homedir(), ".agents", typeCfg.userDir);
     }
@@ -156,15 +156,15 @@ export function strategyToTarget(
 /**
  * Translate the chosen strategy into explicit `--dir` / `--user` flags.
  *
- * Load-bearing for team manifest placement: `src/installers/team.js`
- * reads `flags.user` to decide whether the team manifest entry lives
- * at `.agents/teams/` (project) or `~/.agents/teams/` (user-global).
+ * Load-bearing for bundle manifest placement: `src/installers/bundle.js`
+ * reads `flags.user` to decide whether the bundle manifest entry lives
+ * at `.agents/bundles/` (project) or `~/.agents/bundles/` (user-global).
  *
  * For INDIVIDUAL members (the recursive `installOne` calls), these
- * synthetic flags are mostly inert — the install orchestrator resolves
+ * synthetic flags are mostly inert: the install orchestrator resolves
  * member paths via `chosen.strategy` + `strategyToTarget`, not via
  * `flags.dir` / `flags.user`. This helper exists specifically to keep
- * the team manifest placement correct.
+ * the bundle manifest placement correct.
  */
 export function buildCascadeFlags(chosen, projectPath) {
   switch (chosen.strategy) {
@@ -197,13 +197,13 @@ export function autoDefaultStrategy(descriptors, projectPath) {
 /**
  * Build the four strategy menu options with pre-expanded per-source
  * destinations as the clack "hint" lines (per the Q13-option-2 UX
- * decision). Each label shows where every non-team descriptor will
+ * decision). Each label shows where every non-bundle descriptor will
  * actually land under that strategy, so the user sees full impact
  * before picking.
  */
 export function buildSharedMenuOptions(descriptors, projectPath) {
   const installable = descriptors.filter(
-    (d) => !d.error && d.type && d.type !== "team",
+    (d) => !d.error && d.type && d.type !== "bundle",
   );
 
   const labelFor = (strategy) => {
@@ -302,7 +302,7 @@ export async function pickSharedStrategy(
 
   const options = buildSharedMenuOptions(descriptors, projectPath);
   const installable = descriptors.filter(
-    (d) => !d.error && d.type && d.type !== "team",
+    (d) => !d.error && d.type && d.type !== "bundle",
   );
   const totalCount = installable.length;
   const label =

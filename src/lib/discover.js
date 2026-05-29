@@ -3,7 +3,8 @@
  *
  * Every install location holds one `.ctxr-manifest.json` per artifact-type
  * directory (e.g. `.agents/skills/.ctxr-manifest.json`,
- * `.agents/agents/.ctxr-manifest.json`, `~/.agents/teams/.ctxr-manifest.json`).
+ * `.agents/agents/.ctxr-manifest.json`,
+ * `~/.agents/bundles/.ctxr-manifest.json`).
  * Discovery also walks legacy `.claude/<type>/` and `~/.claude/<type>/` paths
  * plus per-client mirrors (`~/.codex/<type>/`) so `list`, `remove`, and the
  * migration helper can find pre-flip and pre-migration installs.
@@ -202,7 +203,7 @@ export function getInstalledArtifacts(dir) {
       installedAt: raw.installedAt ?? null,
       updatedAt: raw.updatedAt ?? null,
     };
-    if (raw.type === "team" && Array.isArray(raw.members)) {
+    if (raw.type === "bundle" && Array.isArray(raw.members)) {
       entry.members = raw.members;
     }
     out.push(entry);
@@ -211,22 +212,23 @@ export function getInstalledArtifacts(dir) {
 }
 
 /**
- * Team manifests live at `.agents/teams/` (project) and `~/.agents/teams/`
- * (user). Team is a meta type and does not appear in `ARTIFACT_TYPES` with
- * project/user dirs, so the list/remove/update commands call this helper
- * directly to enumerate team manifest locations. The legacy `.claude/teams/`
- * paths are appended so pre-flip team manifests are still found until the
- * migration helper moves them.
+ * Bundle manifests live at `.agents/bundles/` (project) and
+ * `~/.agents/bundles/` (user). Bundle is a meta type and does not appear
+ * in `ARTIFACT_TYPES` with project/user dirs, so the list/remove/update
+ * commands call this helper directly to enumerate bundle manifest
+ * locations. The legacy `.claude/bundles/` paths are appended so pre-
+ * flip bundle manifests are still found until the migration helper
+ * moves them.
  *
- * @param {string} projectPath — absolute project root
+ * @param {string} projectPath: absolute project root
  * @returns {string[]} absolute directory paths that exist
  */
-export function discoverTeamManifestDirs(projectPath) {
+export function discoverBundleManifestDirs(projectPath) {
   const candidates = [
-    join(projectPath, ".agents", "teams"),
-    join(homedir(), ".agents", "teams"),
-    join(projectPath, ".claude", "teams"),
-    join(homedir(), ".claude", "teams"),
+    join(projectPath, ".agents", "bundles"),
+    join(homedir(), ".agents", "bundles"),
+    join(projectPath, ".claude", "bundles"),
+    join(homedir(), ".claude", "bundles"),
   ];
   const seen = new Set();
   return candidates.filter((p) => {
@@ -255,9 +257,9 @@ export function listAllInstalled(projectPath) {
       if (entries.length > 0) out.push({ typeName, dir, entries });
     }
   }
-  for (const dir of discoverTeamManifestDirs(projectPath)) {
-    const entries = getInstalledArtifacts(dir).filter((e) => e.type === "team");
-    if (entries.length > 0) out.push({ typeName: "team", dir, entries });
+  for (const dir of discoverBundleManifestDirs(projectPath)) {
+    const entries = getInstalledArtifacts(dir).filter((e) => e.type === "bundle");
+    if (entries.length > 0) out.push({ typeName: "bundle", dir, entries });
   }
   return out;
 }
@@ -265,10 +267,10 @@ export function listAllInstalled(projectPath) {
 /**
  * Delete an entry's on-disk install paths, every kit-owned discovery mirror
  * recorded on the entry, and the manifest row. Used by `remove` (leaf
- * delete) and `update` (remove-then-reinstall). No team cascade, no
- * confirmation — callers layer their own policy on top.
+ * delete) and `update` (remove-then-reinstall). No bundle cascade, no
+ * confirmation: callers layer their own policy on top.
  *
- * Synthetic team `installedPaths` (which don't exist on disk) are safe
+ * Synthetic bundle `installedPaths` (which don't exist on disk) are safe
  * because `rmSync({ force: true })` ignores missing targets.
  *
  * Discovery mirrors are deleted via `removeMirror` from `./symlink.js`,
@@ -305,8 +307,9 @@ export function removeEntryFromManifest({ dir, entry }) {
 
 /**
  * Find artifact installations matching `identifier` across every installable
- * type plus team manifests. Returns `{ typeName, dir, entry }` tuples so the
- * caller can remove/update without another round-trip to discover the type.
+ * type plus bundle manifests. Returns `{ typeName, dir, entry }` tuples so
+ * the caller can remove/update without another round-trip to discover
+ * the type.
  *
  * Matches by installed-name (manifest key) or `source` package spec.
  *
@@ -338,10 +341,10 @@ export function findArtifactAcrossTypes(identifier, projectPath) {
       }
     }
   }
-  for (const dir of discoverTeamManifestDirs(projectPath)) {
+  for (const dir of discoverBundleManifestDirs(projectPath)) {
     for (const entry of getInstalledArtifacts(dir)) {
-      if (entry.type !== "team") continue;
-      absorb("team", dir, entry);
+      if (entry.type !== "bundle") continue;
+      absorb("bundle", dir, entry);
     }
   }
 

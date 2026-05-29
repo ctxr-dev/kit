@@ -5,7 +5,7 @@
  *
  * `kit` installs, validates, updates, and scaffolds every artifact type
  * Claude Code understands: skills, agents, commands, output-styles, rules,
- * plus ctxr "team" meta-packages that bundle several artifacts together.
+ * plus ctxr "bundle" meta-packages that group several artifacts together.
  *
  * Usage:
  *   npx @ctxr/kit <command> [options]
@@ -47,7 +47,7 @@ Commands:
   init [--type <t>] [name]  Scaffold a new artifact package
 
 Artifact types:
-  skill, agent, command, rule, output-style, team
+  skill, agent, command, rule, output-style, bundle
 
 Global options:
   --help, -h                Show this help message
@@ -75,7 +75,7 @@ Exit codes:
 Examples:
   npx @ctxr/kit install @ctxr/skill-code-review
   npx @ctxr/kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c
-  npx @ctxr/kit install @ctxr/team-full-stack --user
+  npx @ctxr/kit install @ctxr/bundle-full-stack --user
   npx @ctxr/kit init --type agent my-agent
   npx @ctxr/kit list
   npx @ctxr/kit validate ./my-skill

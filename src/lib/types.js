@@ -12,6 +12,11 @@
  * symlinks at install time so harnesses that don't read `.agents/` natively
  * (Claude Code: `.claude/<type>/`; Codex CLI user-scope: `~/.codex/<type>/`)
  * still discover installed artefacts.
+ *
+ * BREAKING in @ctxr/kit 2.0.0: the legacy `team` keyword was renamed to
+ * `bundle` (both `ctxr.type` and `ctxr.target` values). `resolveType` below
+ * rejects `team` with a pointing migration error instead of silently
+ * accepting it.
  */
 
 import { existsSync } from "node:fs";
@@ -59,7 +64,7 @@ export const ARTIFACT_TYPES = Object.freeze({
       user: Object.freeze([".claude/rules", ".codex/rules"]),
     }),
   }),
-  team: Object.freeze({
+  bundle: Object.freeze({
     projectDirs: Object.freeze([]),
     userDir: null,
     discoveryMirrors: Object.freeze({
@@ -81,12 +86,12 @@ export const LEGACY_PROJECT_DIRS = Object.freeze({
   command: ".claude/commands",
   "output-style": ".claude/output-styles",
   rule: ".claude/rules",
-  team: ".claude/teams",
+  bundle: ".claude/bundles",
 });
 
 export const ARTIFACT_TYPE_NAMES = Object.freeze(Object.keys(ARTIFACT_TYPES));
 export const INSTALLABLE_TYPE_NAMES = Object.freeze(
-  ARTIFACT_TYPE_NAMES.filter((t) => t !== "team"),
+  ARTIFACT_TYPE_NAMES.filter((t) => t !== "bundle"),
 );
 export const VALID_TARGETS = Object.freeze(["folder", "file"]);
 
@@ -130,12 +135,18 @@ export function installedName(pkgName) {
 /**
  * Validate and resolve the artifact type from a package's parsed package.json.
  *
- * For team packages, `target` is null and `ctxr.includes` must be present and non-empty.
- * For non-team packages, `target` must be "folder" or "file".
+ * For bundle packages, `target` is null and `ctxr.includes` must be present
+ * and non-empty. For non-bundle packages, `target` must be "folder" or "file".
  *
- * @param {object} pkgJson — parsed package.json contents
+ * The legacy `team` keyword (used pre-2.0.0 for both `type` and `target` in
+ * meta-packages) is rejected with a pointing error message that names
+ * `bundle` as the replacement. This is a BREAKING change introduced in
+ * kit 2.0.0; no consumer was on `team` at cutover so there is no alias.
+ *
+ * @param {object} pkgJson: parsed package.json contents
  * @returns {{ type: string, target: string|null, config: object }}
- * @throws if ctxr block missing, type unknown, or target invalid
+ * @throws if ctxr block missing, type unknown, target invalid, or the
+ *         legacy `team` keyword appears anywhere in the ctxr block
  */
 export function resolveType(pkgJson) {
   if (!pkgJson || typeof pkgJson !== "object" || Array.isArray(pkgJson)) {
@@ -148,6 +159,22 @@ export function resolveType(pkgJson) {
     );
   }
   const { type, target } = ctxr;
+
+  // BREAKING in 2.0.0: explicit migration error for the retired `team`
+  // keyword. We check BOTH `ctxr.type` and `ctxr.target` so a consumer who
+  // mis-set either field gets the same pointing message instead of a
+  // generic "Unknown type" / "Invalid target" answer.
+  if (type === "team") {
+    throw new Error(
+      `ctxr.type: "team" is no longer supported; use "bundle" (renamed in @ctxr/kit 2.0.0).`,
+    );
+  }
+  if (target === "team") {
+    throw new Error(
+      `ctxr.target: "team" is no longer supported; use "bundle" (renamed in @ctxr/kit 2.0.0).`,
+    );
+  }
+
   if (typeof type !== "string" || type.length === 0) {
     throw new Error(
       `Missing "ctxr.type" in package.json. Must be one of: ${ARTIFACT_TYPE_NAMES.join(", ")}.`,
@@ -160,16 +187,16 @@ export function resolveType(pkgJson) {
   }
   const config = ARTIFACT_TYPES[type];
 
-  if (type === "team") {
+  if (type === "bundle") {
     if (!Array.isArray(ctxr.includes) || ctxr.includes.length === 0) {
       throw new Error(
-        `Team packages must declare a non-empty "ctxr.includes" array of member package specs.`,
+        `Bundle packages must declare a non-empty "ctxr.includes" array of member package specs.`,
       );
     }
     return { type, target: null, config };
   }
 
-  // Non-team types require ctxr.target
+  // Non-bundle types require ctxr.target.
   if (typeof target !== "string" || target.length === 0) {
     throw new Error(
       `Missing "ctxr.target" in package.json. Must be one of: ${VALID_TARGETS.join(", ")}.`,
@@ -226,16 +253,16 @@ export function resolveTargetRoot(projectPath, opts) {
   if (user) {
     if (!typeCfg.userDir) {
       throw new Error(
-        `This type has no user-scope directory (team/meta types cannot be installed to --user).`,
+        `This type has no user-scope directory (bundle/meta types cannot be installed to --user).`,
       );
     }
     return join(homedir(), ".agents", typeCfg.userDir);
   }
 
-  // Non-team types only from here on
+  // Non-bundle types only from here on.
   if (!Array.isArray(typeCfg.projectDirs) || typeCfg.projectDirs.length === 0) {
     throw new Error(
-      `This type has no project-scope directories (team/meta types cannot be installed locally).`,
+      `This type has no project-scope directories (bundle/meta types cannot be installed locally).`,
     );
   }
 

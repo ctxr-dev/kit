@@ -283,35 +283,11 @@ export function migrateLegacyClaudePaths({ projectPath }) {
     }
   }
 
-  // Team manifests: legacy `.claude/teams/` → canonical `.agents/teams/`.
-  for (const [legacyParent, canonicalParent] of [
-    [join(projectPath, ".claude", "teams"), join(projectPath, ".agents", "teams")],
-    [join(homedir(), ".claude", "teams"), join(homedir(), ".agents", "teams")],
-  ]) {
-    if (!existsSync(legacyParent)) continue;
-    const legacyManifest = readManifest(legacyParent);
-    if (Object.keys(legacyManifest).length === 0) continue;
-    mkdirSync(canonicalParent, { recursive: true });
-    const canonicalManifest = readManifest(canonicalParent);
-    let movedAny = false;
-    for (const [installedName, entry] of Object.entries(legacyManifest)) {
-      if (canonicalManifest[installedName]) continue;
-      canonicalManifest[installedName] = {
-        ...entry,
-        migratedFrom: legacyParent,
-        updatedAt: new Date().toISOString(),
-      };
-      movedAny = true;
-      process.stderr.write(
-        `migrated team ${installedName}: ${legacyParent} -> ${canonicalParent}\n`,
-      );
-    }
-    if (movedAny) {
-      writeManifest(canonicalParent, canonicalManifest);
-      // Empty out the legacy team manifest so the rows don't show up twice.
-      rmSync(join(legacyParent, ".ctxr-manifest.json"), { force: true });
-    }
-  }
+  // Bundle manifests have no legacy migration path: bundle is a new
+  // meta-type introduced in @ctxr/kit 2.0.0 (renamed from the
+  // pre-release `team`). The 2.0.0 BREAKING change ships without an
+  // alias because no consumer was on `team` at cutover, so this
+  // migration helper has nothing to translate for bundles.
 
   return { migrated };
 }

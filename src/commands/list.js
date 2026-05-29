@@ -2,7 +2,7 @@
  * kit list [path]
  *
  * List every installed artifact across every known `(type, dir)` pair.
- * Grouped by type, one section per type. Teams are listed last with their
+ * Grouped by type, one section per type. Bundles are listed last with their
  * member count. Reads the unified `.ctxr-manifest.json` at each location;
  * does not rely on Claude Code's own artifact discovery.
  *
@@ -71,7 +71,7 @@ export default async function list(args) {
       const version = entry.version ? ` v${entry.version}` : "";
       const label = entry.target ? `[${entry.target}]` : "[meta]";
       const extra =
-        entry.type === "team" && Array.isArray(entry.members)
+        entry.type === "bundle" && Array.isArray(entry.members)
           ? ` (${entry.members.length} member${entry.members.length === 1 ? "" : "s"})`
           : "";
       console.log(`    ${entry.installedName} ${label}${source}${version}${extra}`);

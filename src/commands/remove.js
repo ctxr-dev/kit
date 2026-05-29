@@ -3,8 +3,8 @@
  *
  * Remove installed artifacts (by installed-name or original source) across
  * every known location. Type-aware: walks the full `(type, dir)` space so a
- * skill, agent, command, rule, output-style, or team can all be removed by
- * the same entry point.
+ * skill, agent, command, rule, output-style, or bundle can all be removed
+ * by the same entry point.
  *
  * Behavior rules for this command:
  *
@@ -23,14 +23,14 @@
  *   3. **`--force` is kept as an alias for `--yes`** so earlier scripts
  *      that passed `--force` keep working.
  *
- *   4. **Team cascade** — removing a team also removes every member
+ *   4. **Bundle cascade**: removing a bundle also removes every member
  *      listed in its `members` manifest field, unless `--keep-members`
  *      is passed.
  *
  * Examples:
  *   kit remove ctxr-skill-code-review
  *   kit remove @ctxr/skill-code-review --yes
- *   kit remove ctxr-team-full-stack --keep-members
+ *   kit remove ctxr-bundle-full-stack --keep-members
  *   kit remove skill-a skill-b skill-c --yes
  */
 
@@ -52,14 +52,14 @@ function formatPath(p) {
 }
 
 /**
- * Remove a single matched artifact, cascading to team members when
+ * Remove a single matched artifact, cascading to bundle members when
  * appropriate. Returns a short array of user-facing success lines.
  */
 function removeMatchCascade(match, { keepMembers, projectPath }) {
   const { typeName, entry } = match;
   const lines = [];
 
-  if (typeName === "team" && !keepMembers && Array.isArray(entry.members)) {
+  if (typeName === "bundle" && !keepMembers && Array.isArray(entry.members)) {
     for (const memberName of entry.members) {
       const memberMatches = findArtifactAcrossTypes(memberName, projectPath);
       for (const m of memberMatches) {
@@ -81,10 +81,10 @@ function removeMatchCascade(match, { keepMembers, projectPath }) {
 
   removeEntryFromManifest(match);
   // Remove the AGENTS.md row for project-scope artefacts. User-scope and
-  // team-meta entries don't have an AGENTS.md row, but `removeSkillRow` is
-  // a no-op when the row isn't found, so a single unconditional call is
-  // safe and keeps the logic local.
-  if (typeName !== "team") {
+  // bundle-meta entries don't have an AGENTS.md row, but `removeSkillRow`
+  // is a no-op when the row isn't found, so a single unconditional call
+  // is safe and keeps the logic local.
+  if (typeName !== "bundle") {
     try {
       removeSkillRow({ projectPath, installedName: entry.installedName });
     } catch {
@@ -134,13 +134,13 @@ function printUsage() {
   console.error("  -y, --yes          Skip confirmation AND remove from every matching location");
   console.error("  -f, --force        Alias for --yes (kept for script compatibility)");
   console.error("  -i, --interactive  Force interactive picker (overrides CI detection)");
-  console.error("  --keep-members     For team entries, remove only the team manifest row");
+  console.error("  --keep-members     For bundle entries, remove only the bundle manifest row");
   console.error("  -h, --help         Show this help");
   console.error("");
   console.error("Examples:");
   console.error("  npx @ctxr/kit remove ctxr-skill-code-review");
   console.error("  npx @ctxr/kit remove @ctxr/skill-code-review --yes");
-  console.error("  npx @ctxr/kit remove ctxr-team-full-stack --keep-members");
+  console.error("  npx @ctxr/kit remove ctxr-bundle-full-stack --keep-members");
   console.error("  npx @ctxr/kit remove a b c --yes");
 }
 
