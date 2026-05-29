@@ -1,10 +1,10 @@
 {
-  "name": "team-valid",
+  "name": "bundle-valid",
   "version": "1.0.0",
-  "description": "A valid team fixture: cascades to the valid-skill and agent-file-minimal fixtures via relative paths.",
+  "description": "A valid bundle fixture: cascades to the valid-skill and agent-file-minimal fixtures via relative paths.",
   "files": ["README.md"],
   "ctxr": {
-    "type": "team",
+    "type": "bundle",
     "includes": [
       "../../skill/valid",
       "../../agent/file-minimal"

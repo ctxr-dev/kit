@@ -1,6 +1,6 @@
 # {{titleName}}
 
-An Agent Skills team bundle (Claude Code, Codex CLI) — installs several artifacts in one command.
+An Agent Skills bundle (Claude Code, Codex CLI): installs several artifacts in one command.
 
 ## Installation
 
@@ -12,8 +12,8 @@ The installer will cascade-install every member listed in `ctxr.includes`.
 
 ## Members
 
-Edit `ctxr.includes` in `package.json` to add the artifacts this team should
-install. Each entry is an npm package spec (`@scope/name`),
+Edit `ctxr.includes` in `package.json` to add the artifacts this bundle
+should install. Each entry is an npm package spec (`@scope/name`),
 `github:owner/repo`, or a local path.
 
 ## Releasing

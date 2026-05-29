@@ -1,10 +1,10 @@
 {
-  "name": "team-cyclic-b",
+  "name": "bundle-cyclic-b",
   "version": "1.0.0",
-  "description": "The other half of the cycle: includes team-cyclic-a, which includes team-cyclic-b. Kit's cycle detection must reject this configuration.",
+  "description": "The other half of the cycle: includes bundle-cyclic-a, which includes bundle-cyclic-b. Kit's cycle detection must reject this configuration.",
   "files": ["README.md"],
   "ctxr": {
-    "type": "team",
+    "type": "bundle",
     "includes": [
       "../cyclic-a"
     ]

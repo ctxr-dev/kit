@@ -1,10 +1,10 @@
 {
-  "name": "team-missing-member",
+  "name": "bundle-missing-member",
   "version": "1.0.0",
-  "description": "Team with one valid member and one that points at a nonexistent path. Exercises the batch-continue rule: the valid member installs, the missing member records an error, and the overall team install reports a partial success.",
+  "description": "Bundle with one valid member and one that points at a nonexistent path. Exercises the batch-continue rule: the valid member installs, the missing member records an error, and the overall bundle install reports a partial success.",
   "files": ["README.md"],
   "ctxr": {
-    "type": "team",
+    "type": "bundle",
     "includes": [
       "../../skill/valid",
       "../../skill/totally-nonexistent-ghost-skill"
