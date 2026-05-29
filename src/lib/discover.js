@@ -216,9 +216,10 @@ export function getInstalledArtifacts(dir) {
  * `~/.agents/bundles/` (user). Bundle is a meta type and does not appear
  * in `ARTIFACT_TYPES` with project/user dirs, so the list/remove/update
  * commands call this helper directly to enumerate bundle manifest
- * locations. The legacy `.claude/bundles/` paths are appended so pre-
- * flip bundle manifests are still found until the migration helper
- * moves them.
+ * locations. There is no legacy `.claude/bundles/` path to consider:
+ * the rename from `team` to `bundle` was a clean break in
+ * `@ctxr/kit@2.0.0` and `installBundle` only ever wrote to
+ * `.agents/bundles/`, so we look there exclusively.
  *
  * @param {string} projectPath: absolute project root
  * @returns {string[]} absolute directory paths that exist
@@ -227,8 +228,6 @@ export function discoverBundleManifestDirs(projectPath) {
   const candidates = [
     join(projectPath, ".agents", "bundles"),
     join(homedir(), ".agents", "bundles"),
-    join(projectPath, ".claude", "bundles"),
-    join(homedir(), ".claude", "bundles"),
   ];
   const seen = new Set();
   return candidates.filter((p) => {

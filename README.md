@@ -115,10 +115,11 @@ installable package.
 
 > **BREAKING (`@ctxr/kit` 2.0.0): the `team` meta-type was renamed to `bundle`.**
 > Both `ctxr.type: "team"` and `ctxr.target: "team"` are rejected at install
-> and validate time with a pointing error that names `bundle` as the
-> replacement. No alias, no shim: no consumer was on `team` at cutover.
-> Update your package.json to use `"type": "bundle"` (and, if you set
-> `target`, `"target": "bundle"`) before upgrading.
+> and validate time with a pointing error. No alias, no shim: no consumer
+> was on `team` at cutover. Update your package.json: replace
+> `"type": "team"` with `"type": "bundle"` AND remove any `"target"` field
+> on bundle meta-packages (bundles do not use `ctxr.target`; for ordinary
+> artifacts it must be `"folder"` or `"file"`).
 
 Each canonical install also gets a discovery-mirror symlink at
 `.claude/<type>/<name>` (project) and `~/.codex/<type>/<name>` (user

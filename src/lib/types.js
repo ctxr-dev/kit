@@ -170,8 +170,14 @@ export function resolveType(pkgJson) {
     );
   }
   if (target === "team") {
+    // `ctxr.target` is "folder" / "file" for ordinary artifacts and is
+    // not used for bundle meta-packages, so blindly suggesting
+    // `target: "bundle"` would land the user in a second error. Point
+    // them at both valid paths explicitly.
     throw new Error(
-      `ctxr.target: "team" is no longer supported; use "bundle" (renamed in @ctxr/kit 2.0.0).`,
+      `ctxr.target: "team" is no longer supported (renamed in @ctxr/kit 2.0.0). ` +
+        `For ordinary artifacts set ctxr.target: "folder" or "file"; ` +
+        `for meta-packages set ctxr.type: "bundle" and omit ctxr.target.`,
     );
   }
 
