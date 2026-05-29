@@ -4,12 +4,17 @@ All notable changes to `@ctxr/kit` are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - Unreleased
+
+### BREAKING
+
+- **Renamed the `team` meta-type to `bundle`.** Every consumer-facing surface (the package.json `ctxr.type`, the optional `ctxr.target`, the install/list/remove/update/info/init commands, the manifest dir `.agents/bundles/`, the cycle-detection error string, the per-type validator, the help text, the keywords) now references `bundle` exclusively. Both `ctxr.type: "team"` and `ctxr.target: "team"` are rejected up-front in `resolveType` with a pointing error that names `bundle` as the replacement. No alias, no shim, no deprecation window: no consumer was on `team` at cutover (`team` shipped during the pre-1.0 dev cycle but no published artefact ever used it from outside this monorepo), so 2.0.0 is the clean break. To upgrade, replace `"type": "team"` with `"type": "bundle"` (and `"target": "team"` with `"target": "bundle"` if you set the target field) in your package.json. The `templates/bundle/` scaffold (formerly `templates/team/`) ships the new shape; `kit init --type bundle` offers it by default.
+- Renamed the `tests/fixtures/team/` corpus to `tests/fixtures/bundle/` and updated every fixture name/description so a future test fixture audit reads `bundle` consistently.
 
 ### Changed
 
 - **Repositioned as the Universal CLI for Agent Skills artifacts** (Claude Code, OpenAI Codex CLI, OpenCode, and any other harness implementing the open [Agent Skills standard](https://agentskills.io)). README headline, package.json description, and keywords now lead with the cross-harness framing.
-- **Canonical install location flipped to `.agents/<type>/`** (project) and `~/.agents/<type>/` (user) for every artifact type (skill, agent, command, rule, output-style, team). The legacy `.claude/<type>/` location is no longer a destination; it becomes a discovery-mirror symlink that kit creates automatically so Claude Code's native discovery still finds the artefact. User-scope installs additionally create symlinks at `~/.claude/<type>/<name>` and `~/.codex/<type>/<name>` so Claude Code and Codex CLI both auto-discover global installs.
+- **Canonical install location flipped to `.agents/<type>/`** (project) and `~/.agents/<type>/` (user) for every artifact type (skill, agent, command, rule, output-style, bundle). The legacy `.claude/<type>/` location is no longer a destination; it becomes a discovery-mirror symlink that kit creates automatically so Claude Code's native discovery still finds the artefact. User-scope installs additionally create symlinks at `~/.claude/<type>/<name>` and `~/.codex/<type>/<name>` so Claude Code and Codex CLI both auto-discover global installs.
 - Symlink mirrors are best-effort relative on POSIX (so checked-in repos stay portable across hosts) and fall back to junction → hardlink → copy + sentinel on Windows when symlink permissions are missing.
 - Reordered package.json keywords to lead with `agent-skills`, `agents-md`, `codex`, `claude-code` so registry searches for open-standard terms surface this package first.
 
