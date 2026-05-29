@@ -6,7 +6,7 @@
 
 Universal CLI for [Agent Skills](https://agentskills.io) artifacts: install,
 validate, update, and scaffold **skills, agents, commands, rules,
-output-styles, and teams** for Claude Code, OpenAI Codex CLI, and any other
+output-styles, and bundles** for Claude Code, OpenAI Codex CLI, and any other
 harness that follows the open Agent Skills standard. The canonical install
 location is `.agents/<type>/<name>/` (project) and `~/.agents/<type>/<name>/`
 (user); kit auto-creates discovery-mirror symlinks at `.claude/<type>/<name>`
@@ -101,17 +101,25 @@ auto-detection triggers.
 ## Artifact types
 
 `kit` understands every artifact type the Agent Skills standard recognises,
-plus a `team` meta-type that bundles several of them into a single
+plus a `bundle` meta-type that groups several of them into a single
 installable package.
 
 | Type           | Canonical install path           | `ctxr.target`     | Typical payload          |
 |----------------|----------------------------------|-------------------|--------------------------|
 | `skill`        | `.agents/skills/<name>/`         | `folder`          | `SKILL.md` + assets      |
-| `agent`        | `.agents/agents/<name>.md`       | `file` or `folder`| Single `.md` (or bundle) |
+| `agent`        | `.agents/agents/<name>.md`       | `file` or `folder`| Single `.md` (or wrapper)|
 | `command`      | `.agents/commands/<name>.md`     | `file`            | Single `.md`             |
 | `rule`         | `.agents/rules/<name>.md`        | `file`            | Single `.md`             |
 | `output-style` | `.agents/output-styles/<name>.md`| `file`            | Single `.md`             |
-| `team`         | (cascades to `ctxr.includes`)    | n/a               | No payload               |
+| `bundle`       | (cascades to `ctxr.includes`)    | n/a               | No payload               |
+
+> **BREAKING (`@ctxr/kit` 2.0.0): the `team` meta-type was renamed to `bundle`.**
+> Both `ctxr.type: "team"` and `ctxr.target: "team"` are rejected at install
+> and validate time with a pointing error. No alias, no shim: no consumer
+> was on `team` at cutover. Update your package.json: replace
+> `"type": "team"` with `"type": "bundle"` AND remove any `"target"` field
+> on bundle meta-packages (bundles do not use `ctxr.target`; for ordinary
+> artifacts it must be `"folder"` or `"file"`).
 
 Each canonical install also gets a discovery-mirror symlink at
 `.claude/<type>/<name>` (project) and `~/.codex/<type>/<name>` (user
@@ -121,7 +129,7 @@ see [Install locations](#install-locations) below.
 ## Per-package schema
 
 Every artifact package declares a `ctxr` block in its `package.json`. Only
-`type` and `target` (or `includes` for teams) are required — kit reads
+`type` and `target` (or `includes` for bundles) are required: kit reads
 nothing else. The npm-native `files` field is the **single source of truth**
 for what ships in the package.
 
@@ -146,10 +154,10 @@ for what ships in the package.
 
 ```json
 {
-  "name": "@ctxr/team-full-stack",
+  "name": "@ctxr/bundle-full-stack",
   "files": ["README.md"],
   "ctxr": {
-    "type": "team",
+    "type": "bundle",
     "includes": [
       "@ctxr/skill-code-review",
       "@ctxr/agent-researcher",
@@ -159,9 +167,9 @@ for what ships in the package.
 }
 ```
 
-- **`ctxr.type`** — one of `skill | agent | command | rule | output-style | team`. Picks the destination directory.
-- **`ctxr.target`** — `"folder"` (wrap full payload in a folder) or `"file"` (copy the single payload file flat). Required for every non-team type.
-- **`ctxr.includes`** — required only for teams. Array of package specs to install when this team is installed.
+- **`ctxr.type`**: one of `skill | agent | command | rule | output-style | bundle`. Picks the destination directory.
+- **`ctxr.target`**: `"folder"` (wrap full payload in a folder) or `"file"` (copy the single payload file flat). Required for every non-bundle type.
+- **`ctxr.includes`**: required only for bundles. Array of package specs to install when this bundle is installed.
 
 `kit` never introduces a second copy list. There is no `ctxr.copy`, no
 `ctxr.entry`, no prefix-inferred type. If `npm pack` would ship it, `kit`
@@ -185,8 +193,8 @@ npx @ctxr/kit install \
   @ctxr/rule-typescript-strict \
   github:ctxr-dev/output-style-teaching
 
-# team meta-package — cascades to every member
-npx @ctxr/kit install @ctxr/team-full-stack
+# bundle meta-package: cascades to every member
+npx @ctxr/kit install @ctxr/bundle-full-stack
 
 # user-global instead of project-local
 npx @ctxr/kit install @ctxr/skill-code-review --user
@@ -257,12 +265,12 @@ Team updates cascade to every member.
 
 ### `npx @ctxr/kit remove <name> [--keep-members]`
 
-Remove an installed artifact (or team). For teams, every member listed in
-the manifest is removed too unless `--keep-members` is passed.
+Remove an installed artifact (or bundle). For bundles, every member listed
+in the manifest is removed too unless `--keep-members` is passed.
 
 ```bash
 npx @ctxr/kit remove ctxr-skill-code-review
-npx @ctxr/kit remove ctxr-team-full-stack --keep-members
+npx @ctxr/kit remove ctxr-bundle-full-stack --keep-members
 ```
 
 ### `npx @ctxr/kit list [path]`
@@ -306,7 +314,7 @@ Scaffold a new artifact package from a template. Defaults to
 npx @ctxr/kit init my-skill                       # default --type skill
 npx @ctxr/kit init --type agent my-agent          # scaffold an agent
 npx @ctxr/kit init -t command deploy              # short-form flag
-npx @ctxr/kit init --type team team-full-stack    # scaffold a team meta-package
+npx @ctxr/kit init --type bundle bundle-full-stack  # scaffold a bundle meta-package
 ```
 
 Each template ships a `package.json` with the right `ctxr` block already

@@ -105,7 +105,7 @@ function renderInstalled(match) {
     const fileCount = paths.reduce((n, p) => n + countFiles(p), 0);
     if (fileCount > 0) console.log(`  files:   ${fileCount}`);
   }
-  if (entry.type === "team" && Array.isArray(entry.members)) {
+  if (entry.type === "bundle" && Array.isArray(entry.members)) {
     console.log(`  members: ${entry.members.length}`);
     for (const m of entry.members) console.log(`    - ${m}`);
   }
@@ -182,7 +182,7 @@ export default async function info(args) {
   }
   const projectPath = resolve(".");
 
-  // 1. Installed matches (walk all types + team manifests)
+  // 1. Installed matches (walk all types + bundle manifests)
   const matches = findArtifactAcrossTypes(identifier, projectPath);
 
   // 2. Cwd package fallback (artifact author)

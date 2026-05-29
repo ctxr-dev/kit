@@ -8,7 +8,7 @@
  *
  * Wizard steps (in order, each one bypassed by the matching flag):
  *
- *   1. Type          — one of skill | agent | command | rule | output-style | team      [--type]
+ *   1. Type          : one of skill | agent | command | rule | output-style | bundle      [--type]
  *   2. Name          — default: cwd basename, sanitized to npm grammar                 [positional]
  *   3. Author        — default: `git config user.name <user.email>`                    [--author]
  *   4. Description   — required in the interactive wizard (validator blocks empty);
@@ -356,11 +356,11 @@ async function askLicense(flags, prompt) {
   return choice;
 }
 
-/** Step 6 — target */
+/** Step 6: target */
 async function askTarget(flags, prompt, type) {
   if (flags.target) return flags.target;
-  // Teams have no target (no files shipped).
-  if (type === "team") return null;
+  // Bundles have no target (no files shipped).
+  if (type === "bundle") return null;
   const defaultTarget = type === "skill" ? "folder" : "file";
   // Skills are always folder; the prompt is only meaningful for types where
   // both shapes make sense (agents in particular).
@@ -573,8 +573,8 @@ export default async function init(args, opts = {}) {
       license,
       year: String(new Date().getFullYear()),
       author: author || "",
-      // target may be null for teams; substitute empty to avoid `{{target}}`
-      // literal showing up in rendered templates.
+      // target may be null for bundles; substitute empty to avoid
+      // `{{target}}` literal showing up in rendered templates.
       target: target || "",
     };
 

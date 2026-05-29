@@ -57,8 +57,8 @@ function makeTmpPackage({
 }) {
   const dir = mkdtempSync(join(tmpdir(), `ctxr-test-validate-${type}-`));
   const ctxr =
-    type === "team"
-      ? { type: "team", includes: ["@ctxr/skill-example"] }
+    type === "bundle"
+      ? { type: "bundle", includes: ["@ctxr/skill-example"] }
       : { type, target };
   writeFileSync(
     join(dir, "package.json"),
@@ -318,24 +318,24 @@ describe("validate command", () => {
     });
   });
 
-  describe("team: dynamic fixture", () => {
+  describe("bundle: dynamic fixture", () => {
     it("passes with npm-spec members", () => {
       const dir = makeTmpPackage({
-        type: "team",
-        name: "tmp-team",
+        type: "bundle",
+        name: "tmp-bundle",
         files: ["README.md"],
-        extraWrites: [{ path: "README.md", content: "# Team\n" }],
+        extraWrites: [{ path: "README.md", content: "# Bundle\n" }],
       });
       // overwrite package.json to add a richer includes list
       writeFileSync(
         join(dir, "package.json"),
         JSON.stringify(
           {
-            name: "tmp-team",
+            name: "tmp-bundle",
             version: "1.0.0",
             files: ["README.md"],
             ctxr: {
-              type: "team",
+              type: "bundle",
               includes: ["@ctxr/skill-foo", "@acme/agent-bar"],
             },
           },
@@ -350,20 +350,20 @@ describe("validate command", () => {
     });
 
     it("warns on duplicate member specs", () => {
-      const dir = mkdtempSync(join(tmpdir(), "ctxr-test-validate-team-dup-"));
+      const dir = mkdtempSync(join(tmpdir(), "ctxr-test-validate-bundle-dup-"));
       writeFileSync(
         join(dir, "package.json"),
         JSON.stringify({
-          name: "tmp-team-dup",
+          name: "tmp-bundle-dup",
           version: "1.0.0",
           files: ["README.md"],
           ctxr: {
-            type: "team",
+            type: "bundle",
             includes: ["@ctxr/skill-foo", "@ctxr/skill-foo"],
           },
         }),
       );
-      writeFileSync(join(dir, "README.md"), "# Team dup\n");
+      writeFileSync(join(dir, "README.md"), "# Bundle dup\n");
       const r = cli([dir]);
       assert.equal(r.exitCode, 0, r.combined);
       assert.ok(r.combined.includes("duplicate entry"));
@@ -371,21 +371,21 @@ describe("validate command", () => {
     });
 
     it("errors on malformed member specs", () => {
-      const dir = mkdtempSync(join(tmpdir(), "ctxr-test-validate-team-bad-"));
+      const dir = mkdtempSync(join(tmpdir(), "ctxr-test-validate-bundle-bad-"));
       writeFileSync(
         join(dir, "package.json"),
         JSON.stringify({
-          name: "tmp-team-bad",
+          name: "tmp-bundle-bad",
           version: "1.0.0",
           files: ["README.md"],
           ctxr: {
-            type: "team",
-            // starts with "-" → argv-injection guard
+            type: "bundle",
+            // starts with "-": argv-injection guard
             includes: ["-evil-flag"],
           },
         }),
       );
-      writeFileSync(join(dir, "README.md"), "# Team bad\n");
+      writeFileSync(join(dir, "README.md"), "# Bundle bad\n");
       const r = cli([dir]);
       assert.equal(r.exitCode, 1);
       assert.ok(r.combined.includes("not a valid source spec"));

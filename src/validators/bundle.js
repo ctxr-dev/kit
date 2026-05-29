@@ -1,18 +1,18 @@
 /**
- * Team validator.
+ * Bundle validator.
  *
- * Team packages declare `ctxr.includes: [<spec>...]` — an array of member
- * package specs that `kit install` will cascade to. The generic dispatcher
- * has already confirmed (via `resolveType`) that `includes` is a non-empty
- * array, so this validator only adds:
+ * Bundle packages declare `ctxr.includes: [<spec>...]`: an array of
+ * member package specs that `kit install` will cascade to. The generic
+ * dispatcher has already confirmed (via `resolveType`) that `includes`
+ * is a non-empty array, so this validator only adds:
  *
  *   - Every entry is a non-empty string
  *   - Every entry looks like a plausible source spec (local path, github:
- *     shorthand, or npm package name grammar) — format check only, no
+ *     shorthand, or npm package name grammar): format check only, no
  *     network / filesystem probes. Real availability is a kit install
  *     concern, not a validate concern (members may be unpublished at
  *     validate-time and become available later).
- *   - Member specs are deduplicated — a team with the same member listed
+ *   - Member specs are deduplicated: a bundle with the same member listed
  *     twice is flagged as a warning.
  */
 
@@ -45,7 +45,7 @@ function looksLikeSpec(spec) {
 
 export function validate(root, ctx, resolved) {
   const includes = resolved.pkgJson.ctxr.includes;
-  console.log(`\n▸ team members`);
+  console.log(`\n▸ bundle members`);
 
   const seen = new Set();
   let valid = 0;
@@ -70,9 +70,9 @@ export function validate(root, ctx, resolved) {
       continue;
     }
 
-    // Warn on local-path members — they are technically accepted but will
-    // not resolve on a consumer machine. Publishable teams should reference
-    // npm or GitHub specs.
+    // Warn on local-path members: they are technically accepted but
+    // will not resolve on a consumer machine. Publishable bundles
+    // should reference npm or GitHub specs.
     if (spec.startsWith(".") || spec.startsWith("/") || spec.startsWith("~")) {
       ctx.warn(
         `ctxr.includes["${spec}"]: local-path member will not resolve outside this machine`,

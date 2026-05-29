@@ -202,7 +202,7 @@ describe("init command", () => {
       hasArtifact: true,
     },
     {
-      type: "team",
+      type: "bundle",
       target: null,
       typeFiles: [],
       hasArtifact: false,
@@ -263,7 +263,7 @@ describe("init command", () => {
           );
           assert.ok(pkg.name.startsWith("@ctxr/"));
           assert.equal(pkg.ctxr.type, entry.type);
-          if (entry.type === "team") {
+          if (entry.type === "bundle") {
             assert.ok(Array.isArray(pkg.ctxr.includes));
             assert.ok(pkg.ctxr.includes.length > 0);
           } else {

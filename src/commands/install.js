@@ -7,38 +7,38 @@
  * different location than the user's batch choice. In CI (`CI=true`), with
  * `--yes` / `-y`, when stdin isn't a TTY, or when `--dir` / `--user` is
  * explicit, kit falls through to the existing silent auto-detect and
- * `resolveTargetRoot` logic — so every pre-existing test and every
+ * `resolveTargetRoot` logic, so every pre-existing test and every
  * scripted automation continues to work unchanged.
  *
  * Destination strategies (one symbolic value per menu option):
- *   PROJECT_AGENTS   → <projectPath>/.agents/<type>/        (canonical, project-scope)
- *   USER_GLOBAL      → <homedir>/.agents/<type>/             (canonical, user-scope)
- *   CUSTOM           → user-provided absolute or relative path
+ *   PROJECT_AGENTS   -> <projectPath>/.agents/<type>/   (canonical, project-scope)
+ *   USER_GLOBAL      -> <homedir>/.agents/<type>/        (canonical, user-scope)
+ *   CUSTOM           -> user-provided absolute or relative path
  *
  * After the canonical-paths flip, the installer also emits discovery
  * mirrors (relative symlinks at `.claude/<type>/<name>` etc) so harnesses
  * that don't read `.agents/` natively still find the artefact.
  *
  * Each batched source resolves its real target dir at install time by
- * substituting `<type>` per-item. Team members inherit the strategy their
- * parent team was installed under, so one top-level prompt decides the
- * location for the entire cascade.
+ * substituting `<type>` per-item. Bundle members inherit the strategy
+ * their parent bundle was installed under, so one top-level prompt
+ * decides the location for the entire cascade.
  *
  * Two-phase flow:
- *   1. Metadata fetch — every source is fetched into its own tmpDir, its
+ *   1. Metadata fetch: every source is fetched into its own tmpDir, its
  *      `package.json` is parsed, type is resolved, and the result is cached.
  *      Failures here are recorded in the batch report and the source is
  *      dropped from the install loop.
- *   2. Install — with the strategy decided (prompt or auto-detect), kit
+ *   2. Install: with the strategy decided (prompt or auto-detect), kit
  *      walks the resolved sources, runs per-item stay-or-move prompts for
- *      already-installed artifacts, and hands off to the folder/file/team
+ *      already-installed artifacts, and hands off to the folder/file/bundle
  *      installer. tmpDirs are cleaned up in the outer finally so even a
  *      Ctrl+C mid-menu leaves /tmp tidy.
  *
  * Examples:
  *   kit install @ctxr/skill-code-review
  *   kit install ./path/to/local-skill --dir .agents/skills
- *   kit install @ctxr/skill-a @ctxr/agent-b @ctxr/team-full-stack --user
+ *   kit install @ctxr/skill-a @ctxr/agent-b @ctxr/bundle-full-stack --user
  *   kit install @ctxr/skill-a @ctxr/skill-b --yes   # silent, auto-detect
  */
 
@@ -61,7 +61,7 @@ import { upsertSkillRow } from "../lib/agents-md.js";
 import { migrateLegacyClaudePaths } from "../lib/migrate.js";
 import { installFolder } from "../installers/folder.js";
 import { installFile } from "../installers/file.js";
-import { installTeam } from "../installers/team.js";
+import { installBundle } from "../installers/bundle.js";
 import * as interactive from "../lib/interactive.js";
 import { isFlagLike, unknownFlagError, usageError } from "../lib/cli-errors.js";
 // Destination-strategy resolution lives in `install/strategy.js` so this
@@ -69,7 +69,7 @@ import { isFlagLike, unknownFlagError, usageError } from "../lib/cli-errors.js";
 // + default export). Strategy.js owns the STRATEGY_* symbols, the clack
 // menu builder, the auto-detect fallback, the `--dir`/`--user` short-
 // circuit, the `validateCustomPath` helper for the text prompt, and
-// the `buildCascadeFlags` helper for team manifest placement.
+// the `buildCascadeFlags` helper for bundle manifest placement.
 import {
   buildCascadeFlags,
   pickSharedStrategy,
@@ -167,7 +167,7 @@ function printUsage() {
   console.error("Examples:");
   console.error("  npx @ctxr/kit install @ctxr/skill-code-review");
   console.error("  npx @ctxr/kit install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c");
-  console.error("  npx @ctxr/kit install @ctxr/team-full-stack --user");
+  console.error("  npx @ctxr/kit install @ctxr/bundle-full-stack --user");
   console.error("  npx @ctxr/kit install ./my-local-skill --yes");
 }
 
@@ -265,15 +265,15 @@ function cleanupDescriptor(descriptor) {
 // ─── Install execution (phase 3/4) ───────────────────────────────────────
 
 /**
- * Team cascade — teams have no physical install location; their members
- * inherit the chosen strategy via a synthetic flags object built from
- * `buildCascadeFlags`. Recursion runs through `installOne`, which still
- * applies the per-item stay/move prompt for each member.
+ * Bundle cascade: bundles have no physical install location; their
+ * members inherit the chosen strategy via a synthetic flags object built
+ * from `buildCascadeFlags`. Recursion runs through `installOne`, which
+ * still applies the per-item stay/move prompt for each member.
  *
  * Split out of `installDescriptor` so the top-level dispatcher reads as
  * a ~20-line switch instead of a ~160-line monster.
  */
-async function installTeamDescriptor(
+async function installBundleDescriptor(
   descriptor,
   chosen,
   projectPath,
@@ -285,7 +285,7 @@ async function installTeamDescriptor(
   const { source } = descriptor;
   try {
     const memberFlags = buildCascadeFlags(chosen, projectPath);
-    const result = await installTeam({
+    const result = await installBundle({
       pkgJson: descriptor.pkgJson,
       source,
       sourceType: descriptor.sourceType,
@@ -297,9 +297,9 @@ async function installTeamDescriptor(
       projectPath,
       report,
       dispatcher: async (memberSource, memberFlagsArg, memberCtx) => {
-        // Team members bypass the shared menu (strategy already decided
-        // at the top level). They do still get per-item stay/move prompts
-        // via the normal installOne path below.
+        // Bundle members bypass the shared menu (strategy already
+        // decided at the top level). They do still get per-item
+        // stay/move prompts via the normal installOne path below.
         await installOne(
           memberSource,
           memberFlagsArg,
@@ -310,27 +310,27 @@ async function installTeamDescriptor(
       },
     });
     report.installed.push({
-      type: "team",
+      type: "bundle",
       source,
       installedName: result.installedName,
       installedPaths: result.installedPaths,
     });
   } catch (err) {
-    // Ctrl+C during a team member's stay/move prompt (or anywhere in
-    // the cascade) must propagate — swallowing it here would drop the
+    // Ctrl+C during a bundle member's stay/move prompt (or anywhere in
+    // the cascade) must propagate; swallowing it here would drop the
     // user into the next top-level source and exit with the batch
     // summary instead of exit 130. Matches `installSingleDescriptor`.
     if (err instanceof interactive.UserAbortError) throw err;
-    console.error(`  ✗ ${source} — ${err.message}`);
+    console.error(`  ✗ ${source}: ${err.message}`);
     report.failed.push({ source, error: err.message });
   }
 }
 
 /**
- * Resolve the absolute target root for a non-team descriptor given the
+ * Resolve the absolute target root for a non-bundle descriptor given the
  * chosen strategy. Falls back to the legacy `resolveTargetRoot` auto-
- * detect if the strategy can't apply (e.g. team typeCfg with no project
- * dirs makes it through a malformed chosen object).
+ * detect if the strategy can't apply (e.g. bundle typeCfg with no
+ * project dirs makes it through a malformed chosen object).
  */
 function resolveDescriptorTargetRoot(descriptor, chosen, projectPath, flags) {
   try {
@@ -374,9 +374,9 @@ function findAllExisting(descriptor, projectPath) {
 }
 
 /**
- * Non-team install path. Resolves the target, checks for existing
+ * Non-bundle install path. Resolves the target, checks for existing
  * installs, runs the stay/move prompt if needed, then hands off to
- * `copyAndRecord`. Split out of `installDescriptor` for readability —
+ * `copyAndRecord`. Split out of `installDescriptor` for readability;
  * the dispatcher is now ~20 lines.
  */
 async function installSingleDescriptor(
@@ -489,8 +489,8 @@ async function installSingleDescriptor(
 }
 
 /**
- * Thin dispatcher: routes each descriptor to the team cascade path or
- * the non-team install path. Also short-circuits descriptors that
+ * Thin dispatcher: routes each descriptor to the bundle cascade path or
+ * the non-bundle install path. Also short-circuits descriptors that
  * already failed during metadata fetch.
  */
 async function installDescriptor(
@@ -505,13 +505,13 @@ async function installDescriptor(
   const { source } = descriptor;
 
   if (descriptor.error) {
-    console.error(`  ✗ ${source} — ${descriptor.error.message}`);
+    console.error(`  ✗ ${source}: ${descriptor.error.message}`);
     report.failed.push({ source, error: descriptor.error.message });
     return;
   }
 
-  if (descriptor.type === "team") {
-    await installTeamDescriptor(
+  if (descriptor.type === "bundle") {
+    await installBundleDescriptor(
       descriptor,
       chosen,
       projectPath,
@@ -610,8 +610,8 @@ function typeRel(targetRoot, projectPath) {
 }
 
 /**
- * Team-member install helper. Kept for recursion from the team installer,
- * which still uses the older `dispatcher` callback contract.
+ * Bundle-member install helper. Kept for recursion from the bundle
+ * installer, which still uses the older `dispatcher` callback contract.
  *
  * Member installs bypass the shared menu (strategy already decided) but
  * still run per-item stay/move prompts on already-installed members.
@@ -695,8 +695,8 @@ export default async function install(args, opts = {}) {
 
     // PHASE 3: install each descriptor.
     for (const descriptor of descriptors) {
-      // FRESH visited set per top-level source so `install teamA teamA`
-      // isn't flagged as cyclic.
+      // FRESH visited set per top-level source so `install bundleA
+      // bundleA` isn't flagged as cyclic.
       const visited = new Set();
       try {
         await installDescriptor(

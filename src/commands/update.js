@@ -21,9 +21,10 @@
  *
  * Backup/restore semantics: folder- and file-target artifacts are copied
  * to a tmpDir before the uninstall so a failed re-install can be rolled
- * back to the previous version. Team entries cascade-remove every member
- * first so the re-install runs from a clean slate; a team update that
- * fails part-way leaves members in whatever state the reinstall reached.
+ * back to the previous version. Bundle entries cascade-remove every
+ * member first so the re-install runs from a clean slate; a bundle
+ * update that fails part-way leaves members in whatever state the
+ * reinstall reached.
  *
  * Examples:
  *   kit update                                     # update all installed
@@ -53,11 +54,11 @@ import { isFlagLike, unknownFlagError, usageError } from "../lib/cli-errors.js";
 
 /**
  * Snapshot every path in `installedPaths` into a throwaway tmpDir so the
- * update can roll back on failure. Returns `null` for team entries (their
- * paths are synthetic — nothing lives there to snapshot).
+ * update can roll back on failure. Returns `null` for bundle entries
+ * (their paths are synthetic; nothing lives there to snapshot).
  */
 function snapshotEntry(entry) {
-  if (entry.type === "team") return null;
+  if (entry.type === "bundle") return null;
   const paths = (entry.installedPaths || []).filter((p) => existsSync(p));
   if (paths.length === 0) return null;
   const backupDir = mkdtempSync(join(tmpdir(), "ctxr-update-backup-"));
@@ -99,24 +100,26 @@ function cleanupSnapshot(snapshot) {
 
 /**
  * Build the install flags that pin a reinstall to the same scope the entry
- * currently lives in. Non-team artifacts use `--dir <dir>` to land in the
- * exact original location. Teams can't use `--dir` because the flag would
- * cascade to every member and stuff them into the team manifest directory
- * — instead we translate user-scope teams to `--user` and let project-scope
- * teams fall back to the default `.agents/teams/` location.
+ * currently lives in. Non-bundle artifacts use `--dir <dir>` to land in
+ * the exact original location. Bundles can't use `--dir` because the
+ * flag would cascade to every member and stuff them into the bundle
+ * manifest directory; instead we translate user-scope bundles to
+ * `--user` and let project-scope bundles fall back to the default
+ * `.agents/bundles/` location.
  *
- * "User scope" for a team is defined as living under `~/.agents/teams/` or
- * the legacy `~/.claude/teams/` specifically — NOT just "any path under
- * $HOME". A project whose root happens to live under `$HOME` (e.g.
+ * "User scope" for a bundle is defined as living under
+ * `~/.agents/bundles/` specifically: NOT just "any path under $HOME".
+ * A project whose root happens to live under `$HOME` (e.g.
  * `~/projects/myrepo`) would otherwise be misclassified and its
- * project-scope team entry would get re-installed as user-global on update.
+ * project-scope bundle entry would get re-installed as user-global on
+ * update. The rename to `bundle` was a clean break, so there is no
+ * `~/.claude/bundles/` legacy location to consider here.
  */
-function scopeFlagsForEntry(dir, { isTeam } = {}) {
-  if (isTeam) {
-    const userTeamsAgents = join(homedir(), ".agents", "teams");
-    const userTeamsClaude = join(homedir(), ".claude", "teams");
+function scopeFlagsForEntry(dir, { isBundle } = {}) {
+  if (isBundle) {
+    const userBundlesAgents = join(homedir(), ".agents", "bundles");
     const isUnder = (base) => dir === base || dir.startsWith(base + sep);
-    if (isUnder(userTeamsAgents) || isUnder(userTeamsClaude)) {
+    if (isUnder(userBundlesAgents)) {
       return ["--user"];
     }
     return [];
@@ -229,15 +232,15 @@ function buildInstallArgv(missing, flags) {
 /**
  * Run a reinstall for one already-installed entry via the `install`
  * command. Preserves the entry's scope via `--dir` (or `--user` for
- * teams). `forwardedOpts` is the same DI bag the top-level command
- * accepts — when present it's passed through to every recursive install
+ * bundles). `forwardedOpts` is the same DI bag the top-level command
+ * accepts: when present it's passed through to every recursive install
  * call so in-process tests can see the mock prompt.
  */
 async function updateOne(match, projectPath, flags, forwardedOpts) {
   const { typeName, dir, entry } = match;
   if (!entry.source) {
     console.log(
-      `  ⚠ ${entry.installedName}: no recorded source — reinstall via 'npx @ctxr/kit install'`,
+      `  ⚠ ${entry.installedName}: no recorded source, reinstall via 'npx @ctxr/kit install'`,
     );
     return { ok: false, skipped: true };
   }
@@ -253,8 +256,8 @@ async function updateOne(match, projectPath, flags, forwardedOpts) {
   if (flags.yes) passthroughFlags.push("--yes");
   if (flags.interactive) passthroughFlags.push("--interactive");
 
-  // Team cascade — remove every member first, then reinstall.
-  if (typeName === "team") {
+  // Bundle cascade: remove every member first, then reinstall.
+  if (typeName === "bundle") {
     const memberNames = Array.isArray(entry.members) ? entry.members : [];
     for (const memberName of memberNames) {
       const memberMatches = findArtifactAcrossTypes(memberName, projectPath);
@@ -262,24 +265,24 @@ async function updateOne(match, projectPath, flags, forwardedOpts) {
     }
     removeEntryFromManifest(match);
     try {
-      const teamScopeFlags = scopeFlagsForEntry(dir, { isTeam: true });
-      const installArgs = teamScopeFlags.includes("--user")
-        ? [entry.source, ...teamScopeFlags, ...passthroughFlags]
-        : [entry.source, ...teamScopeFlags, ...passthroughFlags, projectPath];
+      const bundleScopeFlags = scopeFlagsForEntry(dir, { isBundle: true });
+      const installArgs = bundleScopeFlags.includes("--user")
+        ? [entry.source, ...bundleScopeFlags, ...passthroughFlags]
+        : [entry.source, ...bundleScopeFlags, ...passthroughFlags, projectPath];
       await installCmd(installArgs, forwardedOpts);
       const manifest = readManifest(dir);
       if (manifest[entry.installedName]) {
         manifest[entry.installedName].updatedAt = new Date().toISOString();
         writeManifest(dir, manifest);
       }
-      console.log(`  ✓ ${entry.installedName}: team cascade complete`);
+      console.log(`  ✓ ${entry.installedName}: bundle cascade complete`);
       return { ok: true, skipped: false };
     } catch (err) {
       console.error(
-        `  ✗ ${entry.installedName}: team update failed — ${err.message}`,
+        `  ✗ ${entry.installedName}: bundle update failed: ${err.message}`,
       );
       console.error(
-        `    Team and its members were partially removed — reinstall manually.`,
+        `    Bundle and its members were partially removed, reinstall manually.`,
       );
       return { ok: false, skipped: false };
     }

@@ -1,0 +1,12 @@
+{
+  "name": "bundle-cyclic-a",
+  "version": "1.0.0",
+  "description": "Half of a cycle: bundle A includes bundle B, which includes bundle A. Used to pin kit's cycle-detection guard in the bundle installer.",
+  "files": ["README.md"],
+  "ctxr": {
+    "type": "bundle",
+    "includes": [
+      "../cyclic-b"
+    ]
+  }
+}

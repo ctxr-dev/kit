@@ -10,9 +10,9 @@
  * run here so authors can catch them before publishing):
  *   1. Path exists and contains a package.json
  *   2. `ctxr` block present, `ctxr.type` known
- *   3. Non-team types declare `ctxr.target ∈ {"folder", "file"}`
- *   4. Team types declare a non-empty `ctxr.includes` array
- *   5. `packagePayload()` resolves (≥1 file) for non-team types
+ *   3. Non-bundle types declare `ctxr.target in {"folder", "file"}`
+ *   4. Bundle types declare a non-empty `ctxr.includes` array
+ *   5. `packagePayload()` resolves (>=1 file) for non-bundle types
  *   6. For `target: "file"`: after filtering npm's always-include metadata
  *      (README, LICENSE, CHANGELOG, NOTICE, package.json), exactly one
  *      artifact file remains AND that file is `.md`
@@ -37,7 +37,7 @@ import * as agentValidator from "../validators/agent.js";
 import * as commandValidator from "../validators/command.js";
 import * as ruleValidator from "../validators/rule.js";
 import * as outputStyleValidator from "../validators/output-style.js";
-import * as teamValidator from "../validators/team.js";
+import * as bundleValidator from "../validators/bundle.js";
 
 // Static dispatch map. Adding a new type is a two-line edit (registry + this
 // table) rather than a string-search across commands.
@@ -47,7 +47,7 @@ const VALIDATORS = Object.freeze({
   command: commandValidator,
   rule: ruleValidator,
   "output-style": outputStyleValidator,
-  team: teamValidator,
+  bundle: bundleValidator,
 });
 
 function printUsage() {
@@ -60,15 +60,15 @@ function printUsage() {
   console.error("");
   console.error("Checks:");
   console.error("  - package.json exists and has a valid `ctxr` block");
-  console.error("  - ctxr.type is one of: skill, agent, command, rule, output-style, team");
-  console.error("  - Non-team: ctxr.target ∈ {folder, file}; `files` payload is valid");
+  console.error("  - ctxr.type is one of: skill, agent, command, rule, output-style, bundle");
+  console.error("  - Non-bundle: ctxr.target in {folder, file}; `files` payload is valid");
   console.error("  - target:\"file\": exactly one .md artifact after metadata filter");
   console.error("  - Type-specific content checks (frontmatter, cross-refs, etc.)");
 }
 
 /**
- * Run the generic layout check for non-team packages and return a context
- * bundle the per-type validator can reuse:
+ * Run the generic layout check for non-bundle packages and return a
+ * context bundle the per-type validator can reuse:
  *
  *   - `payload` (output of packagePayload) — cached so the validator doesn't
  *     re-spawn npm pack if it also needs the file list.
@@ -134,10 +134,11 @@ export default async function validate(args) {
     throw new Error("package.json is missing a `name` field");
   }
 
-  // resolveType enforces the ctxr schema (type known, target ∈ {folder,file}
-  // for non-team, includes non-empty for team). Surface its errors as hard
-  // failures — these are schema violations, not content issues, and the
-  // per-type validator would only produce noise on a broken schema.
+  // resolveType enforces the ctxr schema (type known, target in
+  // {folder, file} for non-bundle, includes non-empty for bundle).
+  // Surface its errors as hard failures: these are schema violations,
+  // not content issues, and the per-type validator would only produce
+  // noise on a broken schema.
   let resolved;
   try {
     resolved = resolveType(pkgJson);
@@ -166,11 +167,11 @@ export default async function validate(args) {
     `  name: ${pkgJson.name}${resolved.target ? ` · target: ${resolved.target}` : ""}`,
   );
 
-  // Generic payload check for non-team types. Teams have no `files` payload
-  // (the package ships only metadata), so we skip straight to the per-type
-  // validator which checks the `includes` list.
+  // Generic payload check for non-bundle types. Bundles have no `files`
+  // payload (the package ships only metadata), so we skip straight to
+  // the per-type validator which checks the `includes` list.
   let payloadCtx = null;
-  if (resolved.type !== "team") {
+  if (resolved.type !== "bundle") {
     payloadCtx = runGenericPayloadCheck(root, resolved, ctx);
   }
 
