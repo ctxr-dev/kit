@@ -14,19 +14,25 @@ import {
 } from "../../src/lib/types.js";
 
 describe("ARTIFACT_TYPES registry", () => {
-  it("lists all six v1 types", () => {
+  it("lists all six v2 types", () => {
     assert.deepEqual(
       [...ARTIFACT_TYPE_NAMES].sort(),
-      ["agent", "command", "output-style", "rule", "skill", "team"],
+      ["agent", "bundle", "command", "output-style", "rule", "skill"],
     );
   });
 
-  it("excludes team from INSTALLABLE_TYPE_NAMES", () => {
-    assert.ok(!INSTALLABLE_TYPE_NAMES.includes("team"));
+  it("excludes bundle from INSTALLABLE_TYPE_NAMES", () => {
+    assert.ok(!INSTALLABLE_TYPE_NAMES.includes("bundle"));
     assert.equal(INSTALLABLE_TYPE_NAMES.length, ARTIFACT_TYPE_NAMES.length - 1);
   });
 
-  it("every non-team type has a single .agents canonical projectDir", () => {
+  it("does not list the retired `team` keyword anywhere", () => {
+    assert.ok(!ARTIFACT_TYPE_NAMES.includes("team"));
+    assert.ok(!INSTALLABLE_TYPE_NAMES.includes("team"));
+    assert.equal(ARTIFACT_TYPES.team, undefined);
+  });
+
+  it("every non-bundle type has a single .agents canonical projectDir", () => {
     for (const name of INSTALLABLE_TYPE_NAMES) {
       const cfg = ARTIFACT_TYPES[name];
       assert.equal(cfg.projectDirs.length, 1, `${name} should have 1 canonical projectDir`);
@@ -36,7 +42,7 @@ describe("ARTIFACT_TYPES registry", () => {
     }
   });
 
-  it("every non-team type declares discovery mirrors for legacy + per-client dirs", () => {
+  it("every non-bundle type declares discovery mirrors for legacy + per-client dirs", () => {
     for (const name of INSTALLABLE_TYPE_NAMES) {
       const cfg = ARTIFACT_TYPES[name];
       assert.ok(cfg.discoveryMirrors, `${name} must declare discoveryMirrors`);
@@ -66,9 +72,9 @@ describe("ARTIFACT_TYPES registry", () => {
     }
   });
 
-  it("team has no projectDirs and no userDir", () => {
-    assert.deepEqual([...ARTIFACT_TYPES.team.projectDirs], []);
-    assert.equal(ARTIFACT_TYPES.team.userDir, null);
+  it("bundle has no projectDirs and no userDir", () => {
+    assert.deepEqual([...ARTIFACT_TYPES.bundle.projectDirs], []);
+    assert.equal(ARTIFACT_TYPES.bundle.userDir, null);
   });
 
   it("registry is deeply frozen", () => {
@@ -208,16 +214,44 @@ describe("resolveType", () => {
     assert.equal(result.target, "file");
   });
 
-  it("resolves a team package and returns target:null", () => {
+  it("resolves a bundle package and returns target:null", () => {
     const result = resolveType({
-      name: "@ctxr/team-full-stack",
+      name: "@ctxr/bundle-full-stack",
       ctxr: {
-        type: "team",
+        type: "bundle",
         includes: ["@ctxr/skill-foo", "@ctxr/agent-bar"],
       },
     });
-    assert.equal(result.type, "team");
+    assert.equal(result.type, "bundle");
     assert.equal(result.target, null);
+  });
+
+  it('rejects ctxr.type: "team" with a migration error referencing "bundle"', () => {
+    assert.throws(
+      () =>
+        resolveType({
+          ctxr: { type: "team", includes: ["@ctxr/skill-x"] },
+        }),
+      /bundle/,
+    );
+    assert.throws(
+      () =>
+        resolveType({
+          ctxr: { type: "team", includes: ["@ctxr/skill-x"] },
+        }),
+      /"team"/,
+    );
+  });
+
+  it('rejects ctxr.target: "team" with a migration error referencing "bundle"', () => {
+    assert.throws(
+      () => resolveType({ ctxr: { type: "skill", target: "team" } }),
+      /bundle/,
+    );
+    assert.throws(
+      () => resolveType({ ctxr: { type: "skill", target: "team" } }),
+      /"team"/,
+    );
   });
 
   it("resolves every installable type", () => {
@@ -269,7 +303,7 @@ describe("resolveType", () => {
     );
   });
 
-  it("errors on missing ctxr.target for non-team types", () => {
+  it("errors on missing ctxr.target for non-bundle types", () => {
     for (const t of INSTALLABLE_TYPE_NAMES) {
       assert.throws(
         () => resolveType({ ctxr: { type: t } }),
@@ -290,26 +324,28 @@ describe("resolveType", () => {
     );
   });
 
-  it("errors on team without non-empty includes", () => {
+  it("errors on bundle without non-empty includes", () => {
     assert.throws(
-      () => resolveType({ ctxr: { type: "team" } }),
+      () => resolveType({ ctxr: { type: "bundle" } }),
       /non-empty "ctxr\.includes"/,
     );
     assert.throws(
-      () => resolveType({ ctxr: { type: "team", includes: [] } }),
+      () => resolveType({ ctxr: { type: "bundle", includes: [] } }),
       /non-empty "ctxr\.includes"/,
     );
     assert.throws(
-      () => resolveType({ ctxr: { type: "team", includes: "not an array" } }),
+      () => resolveType({ ctxr: { type: "bundle", includes: "not an array" } }),
       /non-empty "ctxr\.includes"/,
     );
   });
 
-  it("team type ignores ctxr.target (no enforcement)", () => {
-    // Team packages have no payload concept, so a stray target field shouldn't matter.
+  it("bundle type ignores ctxr.target (no enforcement)", () => {
+    // Bundle packages have no payload concept, so a stray target field
+    // shouldn't matter as long as the value is not the retired `team`
+    // keyword (which is rejected up-front before the type-specific path).
     const result = resolveType({
       ctxr: {
-        type: "team",
+        type: "bundle",
         target: "file",
         includes: ["@ctxr/skill-foo"],
       },
@@ -321,7 +357,7 @@ describe("resolveType", () => {
 describe("resolveTargetRoot", () => {
   const projectPath = "/tmp/ctxr-test-project";
   const skillCfg = ARTIFACT_TYPES.skill;
-  const teamCfg = ARTIFACT_TYPES.team;
+  const bundleCfg = ARTIFACT_TYPES.bundle;
 
   it("respects explicit --dir absolute path", () => {
     const result = resolveTargetRoot(projectPath, {
@@ -347,9 +383,9 @@ describe("resolveTargetRoot", () => {
     assert.equal(result, join(homedir(), ".agents", "skills"));
   });
 
-  it("--user errors for types without a userDir (team)", () => {
+  it("--user errors for types without a userDir (bundle)", () => {
     assert.throws(
-      () => resolveTargetRoot(projectPath, { user: true, typeCfg: teamCfg }),
+      () => resolveTargetRoot(projectPath, { user: true, typeCfg: bundleCfg }),
       /no user-scope/,
     );
   });
@@ -396,17 +432,17 @@ describe("resolveTargetRoot", () => {
     assert.throws(() => resolveTargetRoot(projectPath, { dir: "/x" }), TypeError);
   });
 
-  it("errors when team type has no project dirs and no --dir/--user", () => {
+  it("errors when bundle type has no project dirs and no --dir/--user", () => {
     assert.throws(
-      () => resolveTargetRoot(projectPath, { typeCfg: teamCfg }),
+      () => resolveTargetRoot(projectPath, { typeCfg: bundleCfg }),
       /no project-scope/,
     );
   });
 
-  it("team can still use explicit --dir (bypasses projectDirs check)", () => {
+  it("bundle can still use explicit --dir (bypasses projectDirs check)", () => {
     const result = resolveTargetRoot(projectPath, {
       dir: "/explicit",
-      typeCfg: teamCfg,
+      typeCfg: bundleCfg,
     });
     assert.equal(result, "/explicit");
   });

@@ -70,7 +70,7 @@ describe("CLI entry point", () => {
       // taxonomy — if a new type lands without the help being updated,
       // users won't know it exists. Pin the matrix here.
       const { stdout } = run("--help");
-      for (const t of ["skill", "agent", "command", "rule", "output-style", "team"]) {
+      for (const t of ["skill", "agent", "command", "rule", "output-style", "bundle"]) {
         assert.ok(stdout.includes(t), `help output should mention type '${t}'`);
       }
     });

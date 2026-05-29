@@ -62,7 +62,7 @@ function makeLocalSkill(tmpRoot, name, description = "Test fixture.") {
   return dir;
 }
 
-function makeTeam(dir, name, includes) {
+function makeBundle(dir, name, includes) {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
@@ -70,7 +70,7 @@ function makeTeam(dir, name, includes) {
       name,
       version: "1.0.0",
       files: ["README.md"],
-      ctxr: { type: "team", includes },
+      ctxr: { type: "bundle", includes },
     }),
   );
   writeFileSync(join(dir, "README.md"), `# ${name}\n`);
@@ -229,18 +229,18 @@ describe("update command", () => {
     });
   });
 
-  describe("team update cascade", () => {
+  describe("bundle update cascade", () => {
     it("cascade-updates every member", () => {
-      const teamDir = join(scratch, "team-update");
-      makeTeam(teamDir, "team-update", [
+      const bundleDir = join(scratch, "bundle-update");
+      makeBundle(bundleDir, "bundle-update", [
         join(FIXTURES, "skill", "valid"),
         join(FIXTURES, "agent", "file-minimal"),
       ]);
-      cli("install", [teamDir, projectDir], env);
+      cli("install", [bundleDir, projectDir], env);
 
-      const r = cli("update", ["team-update", projectDir], env);
+      const r = cli("update", ["bundle-update", projectDir], env);
       assert.equal(r.exitCode, 0, r.combined);
-      assert.ok(r.stdout.includes("team cascade complete"));
+      assert.ok(r.stdout.includes("bundle cascade complete"));
 
       // Members still present after update
       assert.ok(

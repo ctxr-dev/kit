@@ -129,20 +129,20 @@ describe("list command", () => {
     });
   });
 
-  describe("teams", () => {
-    it("lists a team entry with its member count", () => {
-      // Build a team whose members point at real fixture paths.
-      const scratch = mkdtempSync(join(tmpdir(), "ctxr-test-list-team-"));
-      const teamDir = join(scratch, "team-list");
-      mkdirSync(teamDir, { recursive: true });
+  describe("bundles", () => {
+    it("lists a bundle entry with its member count", () => {
+      // Build a bundle whose members point at real fixture paths.
+      const scratch = mkdtempSync(join(tmpdir(), "ctxr-test-list-bundle-"));
+      const bundleDir = join(scratch, "bundle-list");
+      mkdirSync(bundleDir, { recursive: true });
       writeFileSync(
-        join(teamDir, "package.json"),
+        join(bundleDir, "package.json"),
         JSON.stringify({
-          name: "team-list",
+          name: "bundle-list",
           version: "1.0.0",
           files: ["README.md"],
           ctxr: {
-            type: "team",
+            type: "bundle",
             includes: [
               join(FIXTURES, "skill", "valid"),
               join(FIXTURES, "agent", "file-minimal"),
@@ -150,14 +150,14 @@ describe("list command", () => {
           },
         }),
       );
-      writeFileSync(join(teamDir, "README.md"), "# team-list\n");
+      writeFileSync(join(bundleDir, "README.md"), "# bundle-list\n");
 
-      cli("install", [teamDir, projectDir], env);
+      cli("install", [bundleDir, projectDir], env);
 
       const r = cli("list", [projectDir], env);
       assert.equal(r.exitCode, 0);
-      assert.ok(/team \(1\)/.test(r.stdout), `Expected team section, got: ${r.stdout}`);
-      assert.ok(r.stdout.includes("team-list"));
+      assert.ok(/bundle \(1\)/.test(r.stdout), `Expected bundle section, got: ${r.stdout}`);
+      assert.ok(r.stdout.includes("bundle-list"));
       assert.ok(r.stdout.includes("2 members"));
       // Members should still show up in their own sections
       assert.ok(/skill \(1\)/.test(r.stdout));

@@ -40,7 +40,7 @@ function cli(cmd, args, env, cwd) {
   };
 }
 
-function makeTeam(dir, name, includes) {
+function makeBundle(dir, name, includes) {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
@@ -48,7 +48,7 @@ function makeTeam(dir, name, includes) {
       name,
       version: "1.0.0",
       files: ["README.md"],
-      ctxr: { type: "team", includes },
+      ctxr: { type: "bundle", includes },
     }),
   );
   writeFileSync(join(dir, "README.md"), `# ${name}\n`);
@@ -116,19 +116,19 @@ describe("info command", () => {
     });
   });
 
-  describe("installed team", () => {
+  describe("installed bundle", () => {
     it("lists the members", () => {
-      const teamDir = join(scratch, "team-info");
-      makeTeam(teamDir, "team-info", [
+      const bundleDir = join(scratch, "bundle-info");
+      makeBundle(bundleDir, "bundle-info", [
         join(FIXTURES, "skill", "valid"),
         join(FIXTURES, "agent", "file-minimal"),
       ]);
-      cli("install", [teamDir, projectDir], env);
+      cli("install", [bundleDir, projectDir], env);
 
-      const r = cli("info", ["team-info"], env, projectDir);
+      const r = cli("info", ["bundle-info"], env, projectDir);
       assert.equal(r.exitCode, 0, r.stderr);
-      assert.ok(r.stdout.includes("team-info"));
-      assert.ok(/type:\s+team/.test(r.stdout));
+      assert.ok(r.stdout.includes("bundle-info"));
+      assert.ok(/type:\s+bundle/.test(r.stdout));
       assert.ok(r.stdout.includes("members: 2"));
       assert.ok(r.stdout.includes("valid-skill"));
       assert.ok(r.stdout.includes("agent-file-minimal"));

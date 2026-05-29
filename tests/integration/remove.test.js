@@ -44,7 +44,7 @@ function cli(cmd, args, env) {
   };
 }
 
-function makeTeam(dir, name, includes) {
+function makeBundle(dir, name, includes) {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
@@ -52,7 +52,7 @@ function makeTeam(dir, name, includes) {
       name,
       version: "1.0.0",
       files: ["README.md"],
-      ctxr: { type: "team", includes },
+      ctxr: { type: "bundle", includes },
     }),
   );
   writeFileSync(join(dir, "README.md"), `# ${name}\n`);
@@ -175,14 +175,14 @@ describe("remove command", () => {
     });
   });
 
-  describe("team cascade", () => {
+  describe("bundle cascade", () => {
     it("removes every member by default", () => {
-      const teamDir = join(scratch, "team-cascade");
-      makeTeam(teamDir, "team-cascade", [
+      const bundleDir = join(scratch, "bundle-cascade");
+      makeBundle(bundleDir, "bundle-cascade", [
         join(FIXTURES, "skill", "valid"),
         join(FIXTURES, "agent", "file-minimal"),
       ]);
-      cli("install", [teamDir, projectDir], env);
+      cli("install", [bundleDir, projectDir], env);
       assert.ok(
         existsSync(join(projectDir, ".claude", "skills", "valid-skill")),
       );
@@ -190,11 +190,11 @@ describe("remove command", () => {
         existsSync(join(projectDir, ".claude", "agents", "ctxr-agent-minimal.md")),
       );
 
-      const r = cli("remove", ["team-cascade", projectDir, "--force"], env);
+      const r = cli("remove", ["bundle-cascade", projectDir, "--force"], env);
       assert.equal(r.exitCode, 0);
       assert.ok(r.stdout.includes("removed member 'valid-skill'"));
       assert.ok(r.stdout.includes("removed member 'agent-file-minimal'"));
-      assert.ok(r.stdout.includes("removed 'team-cascade'"));
+      assert.ok(r.stdout.includes("removed 'bundle-cascade'"));
 
       assert.ok(
         !existsSync(join(projectDir, ".claude", "skills", "valid-skill")),
@@ -203,27 +203,27 @@ describe("remove command", () => {
         !existsSync(join(projectDir, ".claude", "agents", "ctxr-agent-minimal.md")),
       );
 
-      // Team manifest entry dropped
-      const teamManifest = JSON.parse(
+      // Bundle manifest entry dropped
+      const bundleManifest = JSON.parse(
         readFileSync(
-          join(projectDir, ".agents", "teams", ".ctxr-manifest.json"),
+          join(projectDir, ".agents", "bundles", ".ctxr-manifest.json"),
           "utf8",
         ),
       );
-      assert.ok(!teamManifest["team-cascade"]);
+      assert.ok(!bundleManifest["bundle-cascade"]);
     });
 
-    it("--keep-members preserves members on team removal", () => {
-      const teamDir = join(scratch, "team-keep");
-      makeTeam(teamDir, "team-keep", [
+    it("--keep-members preserves members on bundle removal", () => {
+      const bundleDir = join(scratch, "bundle-keep");
+      makeBundle(bundleDir, "bundle-keep", [
         join(FIXTURES, "skill", "valid"),
         join(FIXTURES, "agent", "file-minimal"),
       ]);
-      cli("install", [teamDir, projectDir], env);
+      cli("install", [bundleDir, projectDir], env);
 
       const r = cli(
         "remove",
-        ["team-keep", projectDir, "--force", "--keep-members"],
+        ["bundle-keep", projectDir, "--force", "--keep-members"],
         env,
       );
       assert.equal(r.exitCode, 0);
@@ -236,14 +236,14 @@ describe("remove command", () => {
         existsSync(join(projectDir, ".claude", "agents", "ctxr-agent-minimal.md")),
       );
 
-      // But the team manifest row is gone
-      const teamManifest = JSON.parse(
+      // But the bundle manifest row is gone
+      const bundleManifest = JSON.parse(
         readFileSync(
-          join(projectDir, ".agents", "teams", ".ctxr-manifest.json"),
+          join(projectDir, ".agents", "bundles", ".ctxr-manifest.json"),
           "utf8",
         ),
       );
-      assert.ok(!teamManifest["team-keep"]);
+      assert.ok(!bundleManifest["bundle-keep"]);
     });
   });
 

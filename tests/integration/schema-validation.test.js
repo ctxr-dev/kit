@@ -13,14 +13,14 @@
  *   - Non-object / array `ctxr` block
  *   - Missing `ctxr.type`
  *   - Unknown `ctxr.type`
- *   - Missing `ctxr.target` on non-team
- *   - Invalid `ctxr.target` on non-team
+ *   - Missing `ctxr.target` on non-bundle
+ *   - Invalid `ctxr.target` on non-bundle
  *   - `target:"file"` with zero artifact files (README only)
  *   - `target:"file"` with two artifact files
  *   - `target:"file"` with a single non-`.md` file
- *   - Team missing `ctxr.includes`
- *   - Team with empty `ctxr.includes`
- *   - Team with non-string `ctxr.includes` entry
+ *   - Bundle missing `ctxr.includes`
+ *   - Bundle with empty `ctxr.includes`
+ *   - Bundle with non-string `ctxr.includes` entry
  */
 
 import { describe, it, beforeEach, afterEach } from "node:test";
@@ -146,8 +146,8 @@ describe("schema validation (ctxr block)", () => {
     });
   });
 
-  describe("ctxr.target rules for non-team types", () => {
-    it("fails when ctxr.target is missing on non-team", () => {
+  describe("ctxr.target rules for non-bundle types", () => {
+    it("fails when ctxr.target is missing on non-bundle", () => {
       const dir = track(
         makePackage({
           pkgJson: {
@@ -243,17 +243,17 @@ describe("schema validation (ctxr block)", () => {
     });
   });
 
-  describe("team ctxr.includes rules", () => {
-    it("fails when team is missing ctxr.includes", () => {
+  describe("bundle ctxr.includes rules", () => {
+    it("fails when bundle is missing ctxr.includes", () => {
       const dir = track(
         makePackage({
           pkgJson: {
-            name: "team-no-includes",
+            name: "bundle-no-includes",
             version: "1.0.0",
             files: ["README.md"],
-            ctxr: { type: "team" },
+            ctxr: { type: "bundle" },
           },
-          files: { "README.md": "# team\n" },
+          files: { "README.md": "# bundle\n" },
         }),
       );
       const r = cli([dir]);
@@ -265,12 +265,12 @@ describe("schema validation (ctxr block)", () => {
       const dir = track(
         makePackage({
           pkgJson: {
-            name: "team-empty-includes",
+            name: "bundle-empty-includes",
             version: "1.0.0",
             files: ["README.md"],
-            ctxr: { type: "team", includes: [] },
+            ctxr: { type: "bundle", includes: [] },
           },
-          files: { "README.md": "# team\n" },
+          files: { "README.md": "# bundle\n" },
         }),
       );
       const r = cli([dir]);
@@ -282,12 +282,12 @@ describe("schema validation (ctxr block)", () => {
       const dir = track(
         makePackage({
           pkgJson: {
-            name: "team-bad-entry",
+            name: "bundle-bad-entry",
             version: "1.0.0",
             files: ["README.md"],
-            ctxr: { type: "team", includes: [42] },
+            ctxr: { type: "bundle", includes: [42] },
           },
-          files: { "README.md": "# team\n" },
+          files: { "README.md": "# bundle\n" },
         }),
       );
       const r = cli([dir]);
@@ -296,6 +296,43 @@ describe("schema validation (ctxr block)", () => {
         r.combined.includes("not a non-empty string") ||
           r.combined.includes("not a valid source spec"),
       );
+    });
+  });
+
+  describe("legacy `team` keyword rejection (BREAKING in 2.0.0)", () => {
+    it('rejects ctxr.type: "team" with a migration error naming "bundle"', () => {
+      const dir = track(
+        makePackage({
+          pkgJson: {
+            name: "legacy-team-type",
+            version: "1.0.0",
+            files: ["README.md"],
+            ctxr: { type: "team", includes: ["@ctxr/skill-x"] },
+          },
+          files: { "README.md": "# legacy\n" },
+        }),
+      );
+      const r = cli([dir]);
+      assert.equal(r.exitCode, 1);
+      assert.ok(r.combined.includes("bundle"));
+      assert.ok(r.combined.includes("team"));
+    });
+
+    it('rejects ctxr.target: "team" with a migration error naming "bundle"', () => {
+      const dir = track(
+        makePackage({
+          pkgJson: {
+            name: "legacy-team-target",
+            version: "1.0.0",
+            files: ["x.md"],
+            ctxr: { type: "skill", target: "team" },
+          },
+          files: { "x.md": "# x\n" },
+        }),
+      );
+      const r = cli([dir]);
+      assert.equal(r.exitCode, 1);
+      assert.ok(r.combined.includes("bundle"));
     });
   });
 });
