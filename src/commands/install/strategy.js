@@ -167,15 +167,25 @@ export function strategyToTarget(
  * the bundle manifest placement correct.
  */
 export function buildCascadeFlags(chosen, projectPath) {
+  // Resolve relative `customPath` / `explicitDir` against the project
+  // root rather than the orchestrator's cwd. When `kit install` runs
+  // with an explicit `<projectPath>` positional, individual members
+  // land relative to `projectPath` (via `strategyToTarget`), so a
+  // relative cascade dir resolved against `process.cwd()` would
+  // place bundle manifests in a different tree than its members.
+  const resolveDir = (raw) => {
+    if (typeof raw !== "string" || raw.length === 0) return raw;
+    return isAbsolute(raw) ? raw : join(projectPath, raw);
+  };
   switch (chosen.strategy) {
     case STRATEGY_USER_GLOBAL:
       return { user: true, dir: null };
     case STRATEGY_PROJECT_AGENTS:
       return { user: false, dir: join(projectPath, ".agents") };
     case STRATEGY_CUSTOM:
-      return { user: false, dir: chosen.customPath };
+      return { user: false, dir: resolveDir(chosen.customPath) };
     case STRATEGY_EXPLICIT_DIR:
-      return { user: false, dir: chosen.explicitDir };
+      return { user: false, dir: resolveDir(chosen.explicitDir) };
     default:
       return {};
   }

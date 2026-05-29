@@ -81,12 +81,16 @@ export const ARTIFACT_TYPES = Object.freeze({
  * Listed here so discovery, removal, and migration share one source of truth.
  */
 export const LEGACY_PROJECT_DIRS = Object.freeze({
+  // Only on-disk-installable types have a legacy `.claude/<type>/`
+  // directory the migration helper rewrites to `.agents/<type>/`.
+  // `bundle` is excluded: it is a meta-type (no on-disk payload), and
+  // the install flow only ever wrote bundle manifests to
+  // `.agents/bundles/`, so there is no `.claude/bundles/` to migrate.
   skill: ".claude/skills",
   agent: ".claude/agents",
   command: ".claude/commands",
   "output-style": ".claude/output-styles",
   rule: ".claude/rules",
-  bundle: ".claude/bundles",
 });
 
 export const ARTIFACT_TYPE_NAMES = Object.freeze(Object.keys(ARTIFACT_TYPES));

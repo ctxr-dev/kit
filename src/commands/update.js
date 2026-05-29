@@ -108,18 +108,18 @@ function cleanupSnapshot(snapshot) {
  * `.agents/bundles/` location.
  *
  * "User scope" for a bundle is defined as living under
- * `~/.agents/bundles/` or the legacy `~/.claude/bundles/` specifically:
- * NOT just "any path under $HOME". A project whose root happens to live
- * under `$HOME` (e.g. `~/projects/myrepo`) would otherwise be
- * misclassified and its project-scope bundle entry would get re-
- * installed as user-global on update.
+ * `~/.agents/bundles/` specifically: NOT just "any path under $HOME".
+ * A project whose root happens to live under `$HOME` (e.g.
+ * `~/projects/myrepo`) would otherwise be misclassified and its
+ * project-scope bundle entry would get re-installed as user-global on
+ * update. The rename to `bundle` was a clean break, so there is no
+ * `~/.claude/bundles/` legacy location to consider here.
  */
 function scopeFlagsForEntry(dir, { isBundle } = {}) {
   if (isBundle) {
     const userBundlesAgents = join(homedir(), ".agents", "bundles");
-    const userBundlesClaude = join(homedir(), ".claude", "bundles");
     const isUnder = (base) => dir === base || dir.startsWith(base + sep);
-    if (isUnder(userBundlesAgents) || isUnder(userBundlesClaude)) {
+    if (isUnder(userBundlesAgents)) {
       return ["--user"];
     }
     return [];

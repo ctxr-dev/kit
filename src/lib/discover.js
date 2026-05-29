@@ -212,14 +212,17 @@ export function getInstalledArtifacts(dir) {
 }
 
 /**
- * Bundle manifests live at `.agents/bundles/` (project) and
+ * Bundle manifests live canonically at `.agents/bundles/` (project) and
  * `~/.agents/bundles/` (user). Bundle is a meta type and does not appear
  * in `ARTIFACT_TYPES` with project/user dirs, so the list/remove/update
  * commands call this helper directly to enumerate bundle manifest
  * locations. There is no legacy `.claude/bundles/` path to consider:
  * the rename from `team` to `bundle` was a clean break in
- * `@ctxr/kit@2.0.0` and `installBundle` only ever wrote to
- * `.agents/bundles/`, so we look there exclusively.
+ * `@ctxr/kit@2.0.0`. Note that when the install flow runs with a
+ * non-canonical `dir` (CUSTOM / EXPLICIT_DIR), `resolveBundleManifestDir`
+ * can additionally write a manifest under `<dir>/bundles`; callers that
+ * may have installed with a custom dir should enumerate that location
+ * themselves rather than relying on this helper.
  *
  * @param {string} projectPath: absolute project root
  * @returns {string[]} absolute directory paths that exist

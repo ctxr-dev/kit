@@ -65,8 +65,15 @@ describe("ARTIFACT_TYPES registry", () => {
     }
   });
 
-  it("LEGACY_PROJECT_DIRS lists a .claude/<type> entry for every type", () => {
+  it("LEGACY_PROJECT_DIRS lists a .claude/<type> entry for every installable type", () => {
     for (const name of ARTIFACT_TYPE_NAMES) {
+      if (name === "bundle") {
+        // bundle is a meta type with no on-disk artifact payload, so
+        // there is no legacy `.claude/bundles/` location to migrate
+        // and the registry intentionally omits it.
+        assert.equal(LEGACY_PROJECT_DIRS[name], undefined);
+        continue;
+      }
       assert.ok(LEGACY_PROJECT_DIRS[name], `${name} must have a legacy dir`);
       assert.ok(LEGACY_PROJECT_DIRS[name].startsWith(".claude/"));
     }
