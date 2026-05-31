@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-05-31
+
+### Changed
+
+- Repointed the remaining `install @ctxr/bundle-full-stack` example shown by `kit install --help` to a published package. 2.0.3 only fixed the README and the top-level `--help`, so the install subcommand's help still printed a 404 target.
+
 ## [2.0.3] - 2026-05-31
 
 ### Changed

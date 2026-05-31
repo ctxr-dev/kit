@@ -1,6 +1,6 @@
 {
   "name": "@ctxr/kit",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Universal CLI for Agent Skills artifacts (Claude Code, Codex CLI, OpenCode): install, validate, update, and scaffold skills, agents, commands, rules, output-styles, and bundles under .agents/ with auto discovery mirrors at .claude/ and ~/.codex/.",
   "type": "module",
   "license": "MIT",

@@ -38,7 +38,7 @@
  * Examples:
  *   kit install @ctxr/skill-code-review
  *   kit install ./path/to/local-skill --dir .agents/skills
- *   kit install @ctxr/skill-a @ctxr/agent-b @ctxr/bundle-full-stack --user
+ *   kit install @ctxr/skill-a @ctxr/agent-b @ctxr/bundle-c --user
  *   kit install @ctxr/skill-a @ctxr/skill-b --yes   # silent, auto-detect
  */
 
@@ -167,7 +167,7 @@ function printUsage() {
   console.error("Examples:");
   console.error("  npx @ctxr/kit@latest install @ctxr/skill-code-review");
   console.error("  npx @ctxr/kit@latest install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c");
-  console.error("  npx @ctxr/kit@latest install @ctxr/bundle-full-stack --user");
+  console.error("  npx @ctxr/kit@latest install @ctxr/agent-staff-engineer --user");
   console.error("  npx @ctxr/kit@latest install ./my-local-skill --yes");
 }
 
