@@ -4,7 +4,28 @@ All notable changes to `@ctxr/kit` are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - Unreleased
+## [Unreleased]
+
+## [2.0.3] - 2026-05-31
+
+### Changed
+
+- Repointed the `@ctxr/bundle-*` install examples in the README and CLI help to a published package: no `@ctxr/bundle-*` package is on npm yet, so the old examples 404'd on copy-paste.
+- Documented the 2.0.1 and 2.0.2 releases below and marked 2.0.0 as released (it had been left as "Unreleased").
+
+## [2.0.2] - 2026-05-29
+
+### Changed
+
+- Pinned the CLI's own printed usage, examples, and error hints to `npx @ctxr/kit@latest` so copy-pasted commands resolve reliably on newer npm, where an unpinned scoped npx spec can fail to link its bin. Test assertions updated to match.
+
+## [2.0.1] - 2026-05-29
+
+### Changed
+
+- Pinned every documented `npx @ctxr/kit` invocation (README plus the six scaffolding templates) to `npx @ctxr/kit@latest`.
+
+## [2.0.0] - 2026-05-29
 
 ### BREAKING
 

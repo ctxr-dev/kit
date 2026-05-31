@@ -75,7 +75,7 @@ Exit codes:
 Examples:
   npx @ctxr/kit@latest install @ctxr/skill-code-review
   npx @ctxr/kit@latest install @ctxr/skill-a @ctxr/agent-b @ctxr/rule-c
-  npx @ctxr/kit@latest install @ctxr/bundle-full-stack --user
+  npx @ctxr/kit@latest install @ctxr/agent-staff-engineer --user
   npx @ctxr/kit@latest init --type agent my-agent
   npx @ctxr/kit@latest list
   npx @ctxr/kit@latest validate ./my-skill

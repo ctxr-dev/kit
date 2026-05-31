@@ -193,8 +193,8 @@ npx @ctxr/kit@latest install \
   @ctxr/rule-typescript-strict \
   github:ctxr-dev/output-style-teaching
 
-# bundle meta-package: cascades to every member
-npx @ctxr/kit@latest install @ctxr/bundle-full-stack
+# install any published artifact (a bundle meta-package would cascade to its members)
+npx @ctxr/kit@latest install @ctxr/agent-staff-engineer
 
 # user-global instead of project-local
 npx @ctxr/kit@latest install @ctxr/skill-code-review --user
